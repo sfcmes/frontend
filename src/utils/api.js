@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+// const API_BASE_URL = 'http://localhost:3000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -31,7 +31,8 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response.status === 401 && !originalRequest._retry) {
+    // Enhanced error handling for mobile compatibility
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -133,12 +134,31 @@ const loginUser = async (data) => {
     }
     return { success: true, data: response.data };
   } catch (error) {
-    console.error('Login error:', error.response ? error.response.data : error.message);
+    console.error('Login error:', error);
+    
+    // Enhanced error handling for mobile compatibility
+    let errorMessage = 'An unexpected error occurred. Please try again.';
+    
+    if (error.response) {
+      // Server responded with error status
+      console.error('Server error response:', error.response.data);
+      errorMessage = error.response.data?.message || 
+                     error.response.data?.error || 
+                     error.response.data?.details ||
+                     `Server error: ${error.response.status}`;
+    } else if (error.request) {
+      // Request made but no response received (common on mobile)
+      console.error('No response received:', error.request);
+      errorMessage = 'No response from server. Please check your connection and try again.';
+    } else {
+      // Something else happened in setting up the request
+      console.error('Request setup error:', error.message);
+      errorMessage = error.message || errorMessage;
+    }
+    
     return {
       success: false,
-      error: error.response
-        ? error.response.data.message
-        : 'An unexpected error occurred. Please try again.',
+      error: errorMessage,
     };
   }
 };

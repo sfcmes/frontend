@@ -63,25 +63,32 @@ export const AuthProvider = ({ children }) => {
         return { success: true };
       } else {
         console.error('Login failed:', response);
-        throw new Error(response.error || 'Login failed: Invalid response format');
+        const errorMessage = response.error || 'Login failed: Invalid response format';
+        setError(errorMessage);
+        return { success: false, error: errorMessage };
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error in AuthContext:', error);
+      
+      // Enhanced error handling for mobile compatibility
       let errorMessage = 'Failed to login';
+      
       if (error.response) {
         // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
         console.error('Server responded with error:', error.response.data);
-        errorMessage = error.response.data.message || 'Server error occurred';
+        errorMessage = error.response.data?.message || 
+                       error.response.data?.error || 
+                       'Server error occurred';
       } else if (error.request) {
-        // The request was made but no response was received
+        // The request was made but no response was received (common on mobile)
         console.error('No response received:', error.request);
-        errorMessage = 'No response from server';
-      } else {
+        errorMessage = 'No response from server. Please check your connection.';
+      } else if (error.message) {
         // Something happened in setting up the request that triggered an Error
         console.error('Error setting up request:', error.message);
         errorMessage = error.message;
       }
+      
       setError(errorMessage);
       return { success: false, error: errorMessage };
     }

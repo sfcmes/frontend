@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { memo, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -398,6 +398,13 @@ const ProjectModal = memo(
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [sectionStats, setSectionStats] = useState([]);
     const [sectionStatsRefreshTrigger, setSectionStatsRefreshTrigger] = useState(0);
+    
+    // Use ref to persist ComponentDialog state across re-renders
+    const componentDialogStateRef = useRef({
+      isOpen: false,
+      component: null,
+      preventAutoClose: false
+    });
 
     const hasEditPermission = useMemo(() => {
       return userRole === 'Admin' || userProjectIds?.includes(project?.id);
@@ -539,10 +546,22 @@ const ProjectModal = memo(
     }, [open, project, onProjectSelect]);
 
     const handleOpenDialog = useCallback((component) => {
+      console.log('Opening ComponentDialog for component:', component?.name);
+      componentDialogStateRef.current = {
+        isOpen: true,
+        component: component,
+        preventAutoClose: true
+      };
       setSelectedComponent(component);
     }, []);
 
     const handleCloseDialog = useCallback(() => {
+      console.log('Closing ComponentDialog');
+      componentDialogStateRef.current = {
+        isOpen: false,
+        component: null,
+        preventAutoClose: false
+      };
       setSelectedComponent(null);
     }, []);
 

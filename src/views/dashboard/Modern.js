@@ -29,13 +29,23 @@ const Modern = () => {
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const videoRef = useRef(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // แยก refresh triggers ให้ชัดเจน
+  const [topCardsRefreshTrigger, setTopCardsRefreshTrigger] = useState(0);
+  const [topPerformersRefreshTrigger, setTopPerformersRefreshTrigger] = useState(0);
+  
   const [userProjects, setUserProjects] = useState([]);
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
+  // ปรับปรุง handleComponentUpdate ให้ไม่กระทบ Dialog ที่เปิดอยู่
   const handleComponentUpdate = useCallback(() => {
-    console.log('Component updated, triggering refresh');
-    setRefreshTrigger((prev) => prev + 1);
+    console.log('Component updated, triggering selective refresh');
+    
+    // รีเฟรช TopCards เท่านั้น (ไม่กระทบ TopPerformers และ Dialog ที่เปิดอยู่)
+    setTopCardsRefreshTrigger((prev) => prev + 1);
+    
+    // ไม่รีเฟรช TopPerformers ทันที เพื่อป้องกัน Dialog ปิดอัตโนมัติ
+    // TopPerformers จะได้รับการอัพเดทผ่าน ProjectModal แทน
   }, []);
 
   useEffect(() => {
@@ -152,6 +162,10 @@ const Modern = () => {
     setShowTopCards(newTab === '1');
     setSelectedProject(null);
     setProjectStats([]);
+    
+    // รีเซ็ต refresh triggers เมื่อเปลี่ยน tab
+    setTopCardsRefreshTrigger(0);
+    setTopPerformersRefreshTrigger(0);
   }, []);
 
   return (
@@ -207,7 +221,7 @@ const Modern = () => {
                 projectId={selectedProject?.id}
                 projectName={selectedProject?.name}
                 isResetState={currentTab === '2'}
-                refreshTrigger={refreshTrigger}
+                refreshTrigger={topCardsRefreshTrigger} // ใช้ trigger เฉพาะ TopCards
               />
             </Grid>
           )}
@@ -216,7 +230,7 @@ const Modern = () => {
               projects={projects}
               onProjectSelect={handleProjectSelect}
               userRole={userRole}
-              refreshTrigger={refreshTrigger}
+              refreshTrigger={topPerformersRefreshTrigger} // ใช้ trigger เฉพาะ TopPerformers
               onTabChange={handleTabChange}
               userProjects={userProjects}
               onComponentUpdate={handleComponentUpdate}

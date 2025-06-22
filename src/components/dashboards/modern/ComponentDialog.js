@@ -24,9 +24,16 @@ import {
   ListItemText,
   useMediaQuery,
   IconButton,
+  Fade,
+  Chip,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { Close as CloseIcon, AttachFile as AttachFileIcon } from '@mui/icons-material';
+import { 
+  Close as CloseIcon, 
+  AttachFile as AttachFileIcon,
+  CheckCircle as CheckCircleIcon,
+  Refresh as RefreshIcon 
+} from '@mui/icons-material';
 import {
   fetchComponentById,
   fetchUserProfile,
@@ -34,8 +41,8 @@ import {
   fetchUserById,
   fetchComponentFiles,
   openFile,
-  fetchUserProjects, // Add this
-  getProjectIdFromSectionId, // Add this
+  fetchUserProjects,
+  getProjectIdFromSectionId,
 } from 'src/utils/api';
 import ComponentDetails from './ComponentDetails';
 import FileManagement from './FileManagement';
@@ -50,6 +57,15 @@ const STATUS_DISPLAY_MAP = {
   rejected: 'ถูกปฏิเสธ',
 };
 
+const STATUS_COLORS = {
+  planning: '#64b5f6',
+  manufactured: '#82ca9d',
+  transported: '#ffc658',
+  accepted: '#8e44ad',
+  installed: '#27ae60',
+  rejected: '#ff6b6b',
+};
+
 // Caches
 const userCache = new Map();
 const componentCache = new Map();
@@ -61,10 +77,10 @@ const ComponentDialog = memo(
     component,
     projectCode,
     onComponentUpdate,
-    canEdit: initialCanEdit, // Renamed to avoid conflict
+    canEdit: initialCanEdit,
     userRole,
+    preventAutoClose = false,
   }) => {
-    // Changed initialization to use initialCanEdit
     const [hasEditPermission, setHasEditPermission] = useState(false);
 
     // State management
@@ -81,27 +97,153 @@ const ComponentDialog = memo(
       snackbarOpen: false,
       snackbarMessage: '',
       lastFetchTime: null,
+      // เพิ่ม state สำหรับการแสดงผลอัพเดท
+      updateSuccess: false,
+      showUpdateResult: false,
+      lastUpdatedStatus: null,
+      isRefreshingData: false,
     });
 
+    const [selectedFiles, setSelectedFiles] = useState([]);
+
+    const theme = useTheme();
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+    const fileInputRef = useRef(null);
+    
+    // Use ref to prevent auto-close during parent re-renders
+    const dialogStateRef = useRef({
+      isOpen: false,
+      preventClose: false
+    });
+    
+    // Update dialog state ref when open prop changes
+    useEffect(() => {
+      if (open && !dialogStateRef.current.isOpen) {
+        console.log('ComponentDialog opening, setting preventClose flag');
+        dialogStateRef.current = {
+          isOpen: true,
+          preventClose: true
+        };
+      } else if (!open && dialogStateRef.current.isOpen) {
+        console.log('ComponentDialog closing, clearing preventClose flag');
+        dialogStateRef.current = {
+          isOpen: false,
+          preventClose: false
+        };
+      }
+    }, [open]);
+
+    // เพิ่ม function สำหรับ refresh ข้อมูล
+    const refreshComponentData = useCallback(async () => {
+      if (!component?.id) return;
+
+      setState(prev => ({ ...prev, isRefreshingData: true }));
+
+      try {
+        const [updatedDetails, updatedFiles] = await Promise.all([
+          fetchComponentById(component.id),
+          fetchComponentFiles(component.id),
+        ]);
+
+        // Process history with user data
+        let processedDetails = updatedDetails;
+        if (state.isAuthenticated && updatedDetails.history) {
+          const uniqueUserIds = [...new Set(updatedDetails.history.map((item) => item.updated_by))];
+
+          const userFetchPromises = uniqueUserIds.map(async (userId) => {
+            if (userCache.has(userId)) {
+              return userCache.get(userId);
+            }
+            try {
+              const userData = await fetchUserById(userId);
+              userCache.set(userId, userData);
+              return userData;
+            } catch (error) {
+              console.warn(`Failed to fetch user ${userId}`, error);
+              return { id: userId, username: 'Unknown' };
+            }
+          });
+
+          const users = await Promise.all(userFetchPromises);
+          const userMap = new Map(users.map((user) => [user.id, user]));
+
+          processedDetails = {
+            ...updatedDetails,
+            history: updatedDetails.history.map((item) => ({
+              ...item,
+              username: userMap.get(item.updated_by)?.username || 'Unknown',
+            })),
+          };
+        }
+
+        // Update cache
+        componentCache.set(component.id, {
+          details: processedDetails,
+          timestamp: Date.now(),
+        });
+
+        setState(prev => ({
+          ...prev,
+          componentDetails: processedDetails,
+          componentFiles: updatedFiles,
+          newStatus: processedDetails.status,
+          isRefreshingData: false,
+        }));
+
+        return processedDetails;
+      } catch (error) {
+        console.error('Error refreshing component data:', error);
+        setState(prev => ({ 
+          ...prev, 
+          isRefreshingData: false,
+          snackbarMessage: 'ไม่สามารถรีเฟรชข้อมูลได้',
+          snackbarOpen: true 
+        }));
+        return null;
+      }
+    }, [component?.id, state.isAuthenticated]);
+
+    // Handler สำหรับการอัพเดท component (รวม logic ทั้งหมด)
+    const handleComponentUpdate = useCallback(
+      (updatedComponent) => {
+        // ถ้าเป็น null หมายถึงการลบ component
+        if (updatedComponent === null) {
+          // ส่งต่อการลบไปยัง parent และปิด dialog
+          onComponentUpdate?.(null);
+          onClose();
+          return;
+        }
+
+        // อัพเดท state ภายใน dialog
+        setState((prev) => ({
+          ...prev,
+          componentDetails: updatedComponent,
+          componentFiles: updatedComponent.files || prev.componentFiles,
+          newStatus: updatedComponent.status, // อัพเดท newStatus ด้วย
+        }));
+
+        // ส่งต่อการอัพเดทไปยัง parent component
+        onComponentUpdate?.(updatedComponent);
+      },
+      [onComponentUpdate, onClose],
+    );
+
+    // Permission checking
     useEffect(() => {
       const checkPermissions = async () => {
         try {
           const userProfile = await fetchUserProfile();
           console.log('Checking permissions for user:', userProfile);
 
-          // Set user role first
           setState((prev) => ({ ...prev, userRole: userProfile.role }));
 
-          // Admin always has permission
           if (userProfile.role === 'Admin') {
             setHasEditPermission(true);
             return;
           }
 
-          // For Site User
           let projectId = component?.project_id;
 
-          // Get project ID from section if not directly available
           if (!projectId && component?.section_id) {
             try {
               projectId = await getProjectIdFromSectionId(component.section_id);
@@ -119,7 +261,6 @@ const ComponentDialog = memo(
             return;
           }
 
-          // Check Site User permissions
           const userProjects = await fetchUserProjects(userProfile.id);
           console.log('User projects:', userProjects);
 
@@ -150,12 +291,6 @@ const ComponentDialog = memo(
         checkPermissions();
       }
     }, [open, component?.project_id, component?.section_id]);
-
-    const theme = useTheme();
-    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
-    const fileInputRef = useRef(null);
-
-    const [selectedFiles, setSelectedFiles] = useState([]);
 
     // File handlers
     const handleFileOpen = useCallback(async (fileUrl) => {
@@ -201,13 +336,15 @@ const ComponentDialog = memo(
       setState((prev) => ({ ...prev, newStatus: event.target.value }));
     }, []);
 
+    // ปรับปรุง handleStatusUpdate ให้ไม่ปิด dialog และแสดงผลการอัพเดท
     const handleStatusUpdate = useCallback(async () => {
       if (!hasEditPermission && state.userRole !== 'Admin') {
         showSnackbar('คุณไม่มีสิทธิ์ในการอัพเดทสถานะ');
         return;
       }
 
-      setState((prev) => ({ ...prev, isUpdating: true }));
+      const previousStatus = state.componentDetails?.status;
+      setState((prev) => ({ ...prev, isUpdating: true, showUpdateResult: false }));
 
       try {
         if (!state.newStatus) {
@@ -218,37 +355,54 @@ const ComponentDialog = memo(
           throw new Error('ไม่พบรหัสชิ้นงาน');
         }
 
+        // ส่ง API อัพเดทสถานะ
         const response = await updateComponentStatus(component.id, state.newStatus);
 
         if (response) {
-          const updatedDetails = await fetchComponentById(component.id);
-
-          // Update cache with new data
-          componentCache.set(component.id, {
-            details: updatedDetails,
-            timestamp: Date.now(),
-          });
-
+          // แสดงผลการอัพเดทสำเร็จทันที
           setState((prev) => ({
             ...prev,
-            componentDetails: updatedDetails,
+            updateSuccess: true,
+            showUpdateResult: true,
+            lastUpdatedStatus: state.newStatus,
             isUpdating: false,
-            lastFetchTime: Date.now(),
           }));
 
-          showSnackbar('อัพเดทสถานะเรียบร้อยแล้ว');
-
-          if (onComponentUpdate) {
+          // รีเฟรชข้อมูลในพื้นหลัง
+          const updatedDetails = await refreshComponentData();
+          
+          if (updatedDetails && onComponentUpdate) {
             onComponentUpdate(updatedDetails);
           }
+
+          // แสดง Snackbar ยืนยัน
+          showSnackbar(
+            `อัพเดทสถานะจาก "${STATUS_DISPLAY_MAP[previousStatus] || previousStatus}" เป็น "${STATUS_DISPLAY_MAP[state.newStatus]}" เรียบร้อยแล้ว`
+          );
+          
+          // ซ่อนผลการอัพเดทหลัง 5 วินาที
+          setTimeout(() => {
+            setState((prev) => ({ ...prev, showUpdateResult: false }));
+          }, 5000);
+
+          // *** ไม่ปิด Dialog ให้ user ทำงานต่อได้ ***
         }
       } catch (error) {
         console.error('Error updating status:', error);
+        setState((prev) => ({
+          ...prev,
+          updateSuccess: false,
+          showUpdateResult: true,
+          isUpdating: false,
+        }));
         showSnackbar(error.message || 'ไม่สามารถอัพเดทสถานะได้ กรุณาลองใหม่');
-      } finally {
-        setState((prev) => ({ ...prev, isUpdating: false }));
+        
+        // ซ่อนผลการอัพเดทหลัง 5 วินาที
+        setTimeout(() => {
+          setState((prev) => ({ ...prev, showUpdateResult: false }));
+        }, 5000);
       }
-    }, [component?.id, state.newStatus, hasEditPermission, onComponentUpdate, showSnackbar]);
+    }, [component?.id, state.newStatus, hasEditPermission, onComponentUpdate, showSnackbar, refreshComponentData, state.componentDetails?.status]);
 
     // Data fetching with cache
     useEffect(() => {
@@ -265,7 +419,6 @@ const ComponentDialog = memo(
         setState((prev) => ({ ...prev, loading: true, error: null }));
 
         try {
-          // Check if we have valid cached data
           if (cached && now - cached.timestamp < CACHE_DURATION) {
             const [files, userProfile] = await Promise.all([
               fetchComponentFiles(component.id, { signal }),
@@ -287,7 +440,6 @@ const ComponentDialog = memo(
             }
           }
 
-          // If no cache or expired, fetch everything
           const [details, files, userProfile] = await Promise.all([
             fetchComponentById(component.id, { signal }),
             fetchComponentFiles(component.id, { signal }),
@@ -297,12 +449,10 @@ const ComponentDialog = memo(
           const isAuthenticated = !!userProfile;
           const userRole = userProfile?.role || '';
 
-          // Process history with optimized user data fetching
           let processedDetails = details;
           if (isAuthenticated && details.history) {
             const uniqueUserIds = [...new Set(details.history.map((item) => item.updated_by))];
 
-            // Fetch missing users in parallel
             const userFetchPromises = uniqueUserIds.map(async (userId) => {
               if (userCache.has(userId)) {
                 return userCache.get(userId);
@@ -329,7 +479,6 @@ const ComponentDialog = memo(
             };
           }
 
-          // Update cache
           componentCache.set(component.id, {
             details: processedDetails,
             timestamp: now,
@@ -366,53 +515,6 @@ const ComponentDialog = memo(
       };
     }, [open, component?.id]);
 
-    // แยก state สำหรับการจัดการไฟล์
-    const [fileManagementState, setFileManagementState] = useState({
-      selectedFiles: [],
-    });
-
-    // Handler สำหรับการอัพเดท component
-    const handleComponentUpdate = useCallback(
-      (updatedComponent) => {
-        setState((prev) => ({
-          ...prev,
-          componentDetails: updatedComponent,
-          componentFiles: updatedComponent.files || prev.componentFiles,
-        }));
-
-        // ส่งต่อการอัพเดทไปยัง parent component
-        onComponentUpdate?.(updatedComponent);
-      },
-      [onComponentUpdate],
-    );
-
-    useEffect(() => {
-      const checkPermissions = async () => {
-        if (!component?.project_id) return;
-
-        try {
-          const userProfile = await fetchUserProfile();
-          const userId = userProfile.id;
-
-          const { canEdit: hasPermission } = await checkUserProjectPermission(
-            userId,
-            component.project_id,
-          );
-
-          setHasEditPermission(hasPermission);
-        } catch (error) {
-          console.error('Error checking permissions:', error);
-          setHasEditPermission(false);
-        }
-      };
-
-      if (open) {
-        checkPermissions();
-      }
-    }, [open, component?.project_id]);
-
-    // const canEditComponent = state.canEdit || canEdit;
-
     // Early returns
     if (!open) return null;
 
@@ -448,13 +550,9 @@ const ComponentDialog = memo(
               componentDetails={state.componentDetails}
               userRole={state.userRole}
               onUpdate={(updatedDetails) => {
-                if (updatedDetails === null) {
-                  onComponentUpdate?.(null);
-                  onClose();
-                } else {
-                  setState((prev) => ({ ...prev, componentDetails: updatedDetails }));
-                  onComponentUpdate?.(updatedDetails);
-                }
+                // *** แก้ไขตรงนี้: ไม่ปิด dialog เมื่ออัพเดทรายละเอียด ***
+                // เฉพาะเมื่อลบ component เท่านั้นที่จะปิด
+                handleComponentUpdate(updatedDetails);
               }}
               setSnackbarMessage={showSnackbar}
               setSnackbarOpen={(open) => setState((prev) => ({ ...prev, snackbarOpen: open }))}
@@ -465,9 +563,20 @@ const ComponentDialog = memo(
         case 1:
           return (
             <Box>
-              <Typography variant="h6" gutterBottom>
-                ประวัติสถานะ
-              </Typography>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6">
+                  ประวัติสถานะ
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={state.isRefreshingData ? <CircularProgress size={16} /> : <RefreshIcon />}
+                  onClick={refreshComponentData}
+                  disabled={state.isRefreshingData}
+                >
+                  {state.isRefreshingData ? 'กำลังรีเฟรช...' : 'รีเฟรช'}
+                </Button>
+              </Box>
               <Table size="small">
                 <TableHead>
                   <TableRow>
@@ -481,7 +590,15 @@ const ComponentDialog = memo(
                   {state.componentDetails?.history?.map((historyItem, index) => (
                     <TableRow key={index}>
                       <TableCell>
-                        {STATUS_DISPLAY_MAP[historyItem.status] || historyItem.status}
+                        <Chip
+                          label={STATUS_DISPLAY_MAP[historyItem.status] || historyItem.status}
+                          size="small"
+                          sx={{
+                            bgcolor: STATUS_COLORS[historyItem.status] || '#grey',
+                            color: 'white',
+                            fontWeight: 'bold'
+                          }}
+                        />
                       </TableCell>
                       <TableCell>
                         {new Date(historyItem.updated_at).toLocaleString('th-TH')}
@@ -520,6 +637,22 @@ const ComponentDialog = memo(
               <Typography variant="h6" gutterBottom>
                 อัพเดทสถานะ
               </Typography>
+              
+              {/* แสดงสถานะปัจจุบัน */}
+              <Box mb={2}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  สถานะปัจจุบัน:
+                </Typography>
+                <Chip
+                  label={STATUS_DISPLAY_MAP[state.componentDetails?.status] || state.componentDetails?.status}
+                  sx={{
+                    bgcolor: STATUS_COLORS[state.componentDetails?.status] || '#grey',
+                    color: 'white',
+                    fontWeight: 'bold'
+                  }}
+                />
+              </Box>
+
               {state.userRole === 'Admin' || hasEditPermission ? (
                 <>
                   <Select
@@ -527,22 +660,82 @@ const ComponentDialog = memo(
                     onChange={handleStatusChange}
                     fullWidth
                     sx={{ mt: 2 }}
+                    disabled={state.isUpdating}
                   >
                     {Object.entries(STATUS_DISPLAY_MAP).map(([value, label]) => (
                       <MenuItem key={value} value={value}>
-                        {label}
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Box
+                            width={12}
+                            height={12}
+                            borderRadius="50%"
+                            bgcolor={STATUS_COLORS[value]}
+                          />
+                          {label}
+                        </Box>
                       </MenuItem>
                     ))}
                   </Select>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleStatusUpdate}
-                    disabled={state.isUpdating}
-                    sx={{ mt: 2 }}
-                  >
-                    {state.isUpdating ? 'กำลังอัพเดท...' : 'อัพเดทสถานะ'}
-                  </Button>
+                  
+                  <Box display="flex" flexDirection="column" gap={2} mt={2}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handleStatusUpdate}
+                      disabled={state.isUpdating || !state.newStatus || state.newStatus === state.componentDetails?.status}
+                      startIcon={state.isUpdating ? <CircularProgress size={16} /> : null}
+                      size="large"
+                      sx={{ alignSelf: 'flex-start' }}
+                    >
+                      {state.isUpdating ? 'กำลังอัพเดท...' : 'อัพเดทสถานะ'}
+                    </Button>
+
+                    {/* แสดงผลการอัพเดทแบบโดดเด่น */}
+                    <Fade in={state.showUpdateResult}>
+                      <Box>
+                        {state.updateSuccess ? (
+                          <Alert 
+                            severity="success" 
+                            icon={<CheckCircleIcon />}
+                            sx={{ 
+                              '& .MuiAlert-message': { 
+                                fontSize: '1rem',
+                                fontWeight: 'bold'
+                              }
+                            }}
+                          >
+                            <Box>
+                              <Typography variant="subtitle1" component="div">
+                                ✅ อัพเดทสถานะสำเร็จ!
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                สถานะได้เปลี่ยนเป็น "{STATUS_DISPLAY_MAP[state.lastUpdatedStatus]}" แล้ว
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                คุณสามารถดูประวัติในแท็บ "ประวัติสถานะ" หรือทำงานต่อได้
+                              </Typography>
+                            </Box>
+                          </Alert>
+                        ) : (
+                          <Alert severity="error">
+                            <Typography variant="subtitle1" component="div">
+                              ❌ อัพเดทไม่สำเร็จ
+                            </Typography>
+                            <Typography variant="body2">
+                              กรุณาลองใหม่อีกครั้ง
+                            </Typography>
+                          </Alert>
+                        )}
+                      </Box>
+                    </Fade>
+                  </Box>
+
+                  {/* แสดงคำแนะนำ */}
+                  {state.newStatus === state.componentDetails?.status && (
+                    <Alert severity="info" sx={{ mt: 2 }}>
+                      สถานะที่เลือกเหมือนกับสถานะปัจจุบัน
+                    </Alert>
+                  )}
                 </>
               ) : (
                 <Alert severity="info" sx={{ mt: 2 }}>
@@ -625,12 +818,22 @@ const ComponentDialog = memo(
           maxWidth="md"
           fullWidth
           TransitionProps={{
-            onExited: () => setState((prev) => ({ ...prev, tabValue: 0 })),
+            onExited: () => setState((prev) => ({ 
+              ...prev, 
+              tabValue: 0,
+              showUpdateResult: false,
+              updateSuccess: false 
+            })),
           }}
         >
           <DialogTitle>
             <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Typography variant="h6">รายละเอียด: {state.componentDetails?.name}</Typography>
+              <Box>
+                <Typography variant="h6">รายละเอียด: {state.componentDetails?.name}</Typography>
+                <Typography variant="subtitle2" color="text.secondary">
+                  สถานะ: {STATUS_DISPLAY_MAP[state.componentDetails?.status] || state.componentDetails?.status}
+                </Typography>
+              </Box>
               <IconButton onClick={onClose}>
                 <CloseIcon />
               </IconButton>
@@ -645,15 +848,25 @@ const ComponentDialog = memo(
               allowScrollButtonsMobile
             >
               <Tab label="รายละเอียดชิ้นงาน" />
-              <Tab label="ประวัติสถานะ" />
+              <Tab 
+                label="ประวัติสถานะ" 
+                icon={state.isRefreshingData ? <CircularProgress size={16} /> : null}
+                iconPosition="end"
+              />
               <Tab label="ไฟล์" />
               {(state.userRole === 'Admin' || hasEditPermission) && <Tab label="อัพเดทสถานะ" />}
               {hasEditPermission && <Tab label="จัดการไฟล์" />}
             </Tabs>
             <Box sx={{ mt: 2 }}>{renderTabContent()}</Box>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={onClose} color="primary">
+          <DialogActions sx={{ justifyContent: 'space-between', px: 3, py: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              {state.showUpdateResult && state.updateSuccess ? 
+                '💡 หน้าต่างจะไม่ปิดอัตโนมัติ คุณสามารถทำงานต่อหรือปิดด้วยตนเองได้' : 
+                'คลิก "ปิด" เพื่อกลับไปหน้าหลัก'
+              }
+            </Typography>
+            <Button onClick={onClose} color="primary" variant="outlined" size="large">
               ปิด
             </Button>
           </DialogActions>
@@ -673,7 +886,5 @@ const ComponentDialog = memo(
     );
   },
 );
-
-// PropTypes validation could be added here if needed
 
 export default ComponentDialog;
