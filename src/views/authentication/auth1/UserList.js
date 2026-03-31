@@ -129,11 +129,6 @@ const UserList = () => {
   };
 
   const handleAssignProjects = (user) => {
-    console.log('Opening project assignment dialog:', {
-      user,
-      currentProjects: userProjects[user.id] || []
-    });
-    
     setEditUser(user);
     setSelectedProjects(userProjects[user.id] || []);
     setOpenProjectDialog(true);
@@ -143,10 +138,8 @@ const UserList = () => {
     setLoading(true);
     try {
       if (roles[editUser.role_id] !== 'Admin') {
-        console.log('Assigning projects:', editUser.id, selectedProjects);
         
         const result = await assignProjectsToUser(editUser.id, selectedProjects);
-        console.log('Assignment result:', result);
   
         // Update local state immediately
         const updatedUserProjects = { ...userProjects };
@@ -177,13 +170,7 @@ const UserList = () => {
         return <Chip label="All Projects" color="primary" />;
       } else if (roles[user.role_id] === 'Site User') {
         const userProjectIds = userProjects[user.id] || [];
-        console.log('Rendering projects for user:', {
-          userId: user.id,
-          projectIds: userProjectIds,
-          projectsMap: userProjects,
-          availableProjects: projects
-        });
-  
+
         return userProjectIds.length > 0 ? (
           userProjectIds.map(projectId => {
             const project = projects.find(p => p.id.toString() === projectId.toString());

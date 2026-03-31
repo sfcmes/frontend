@@ -35,7 +35,6 @@ const Profile = () => {
       const token = localStorage.getItem('token');
       if (!token) {
         // If no token, don't try to fetch profile
-        console.log('No auth token found');
         return;
       }
       

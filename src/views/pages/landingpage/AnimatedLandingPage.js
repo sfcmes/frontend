@@ -1,7 +1,6 @@
 // src/components/landingpage/AnimatedLandingPage.js
 import React from 'react';
 import { motion } from 'framer-motion';
-import './AnimatedLandingPage.css';
 
 const AnimatedLandingPage = () => {
   return (

@@ -136,7 +136,6 @@ const ProductTableList = ({ projectId, searchTerm }) => {
       const fetchComponents = async () => {
         try {
           const response = await fetchComponentsByProjectId(projectId);
-          console.log('Fetched components:', response.data);
           setRows(response.data);
         } catch (error) {
           console.error('Error fetching components:', error.response ? error.response.data : error);

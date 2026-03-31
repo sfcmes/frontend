@@ -89,7 +89,6 @@ const PrecastComponentForm = ({ projects, sections, onProjectChange }) => {
         }
 
         const response = await createPrecastComponent(formData);
-        console.log('Precast component created:', response);
         setSuccess('ชิ้นงานถูกสร้างเรียบร้อยแล้ว');
         formik.resetForm();
       } catch (error) {

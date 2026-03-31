@@ -14,7 +14,6 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         api.setToken(token);
         try {
-          console.log('Initializing auth, token found:', token);
           await fetchUser();
         } catch (error) {
           console.error('Error initializing auth:', error);
@@ -24,7 +23,6 @@ export const AuthProvider = ({ children }) => {
           api.setToken(null);
         }
       } else {
-        console.log('No token found, setting loading to false');
         setLoading(false);
       }
     };
@@ -34,9 +32,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUser = async () => {
     try {
-      console.log('Fetching user profile...');
       const response = await api.get('/users/me');
-      console.log('User profile fetched:', response.data);
       setUser(response.data);
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -49,9 +45,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (emailOrUsername, password) => {
     setError(null);
     try {
-      console.log('Attempting to login with:', emailOrUsername);
       const response = await loginUser({ emailOrUsername, password });
-      console.log('Login response:', response);
       
       if (response.success && response.data && response.data.token) {
         localStorage.setItem('token', response.data.token);
@@ -89,7 +83,6 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      console.log('Logging out');
       await logoutUser();
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');

@@ -79,7 +79,6 @@ const QRCodePage = () => {
     const loadProjects = async () => {
       try {
         const response = await fetchProjects();
-        console.log('Fetched projects:', response.data);
         setProjects(response.data);
       } catch (error) {
         console.error('Error fetching projects:', error);
@@ -143,7 +142,6 @@ const QRCodePage = () => {
     const projectId = event.target.value;
     setSelectedProject(projectId);
     setNoDataMessage('');
-    console.log('Fetching components for project:', projectId);
     try {
       const response = await fetchComponentsByProjectId(projectId);
       const sectionResponse = await fetchSectionsByProjectId(projectId);
@@ -175,7 +173,6 @@ const QRCodePage = () => {
       // const qrCodeUrl = `${window.location.origin}/api/components/qr/${component.id}`;
       // const qrCodeUrl = `${window.location.origin}/qr/component/${component.id}`;
       const qrCodeUrl = `${window.location.origin}/forms/form-component-card/${component.id}`;
-      console.log(qrCodeUrl);
       setQrCodeData(qrCodeUrl);
       setIsModalOpen(true);
     } catch (error) {
@@ -459,7 +456,6 @@ const QRCodePage = () => {
     return 0;
   });
 
-  console.log('Projects:', projects);
 
   return (
     <PageContainer title="QRCODE" description="สร้าง QR CODE">

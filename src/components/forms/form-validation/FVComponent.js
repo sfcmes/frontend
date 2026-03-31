@@ -37,7 +37,6 @@ const FVComponent = () => {
 
   const handleComponentAdded = (newComponent) => {
     // Do something with the new component, e.g., update state or show a notification
-    console.log('New component added:', newComponent);
   };
 
   return (

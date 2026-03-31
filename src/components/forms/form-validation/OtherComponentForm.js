@@ -56,7 +56,6 @@ const OtherComponentForm = ({ projects, onProjectChange, onComponentAdded }) => 
       setIsSubmitting(true);
       try {
         const response = await createOtherComponent(values);
-        console.log('New other component created:', response);
         setSuccess('ชิ้นงานอื่นๆ ถูกสร้างเรียบร้อยแล้ว');
         onComponentAdded(response); // Notify parent component about the new component
         formik.resetForm(); // Reset the form after successful submission

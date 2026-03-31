@@ -138,18 +138,14 @@ const ProjectRow = memo(
     // In TopPerformers.js, update the hasProjectPermission check
     const hasProjectPermission = useMemo(() => {
       const projectId = project?.id?.toString();
-      console.log('Checking project permission for:', projectId);
-      console.log('User Project IDs:', userProjectIds);
 
       if (!Array.isArray(userProjectIds) || !projectId) {
-        console.log('Invalid project IDs or user project IDs');
         return false;
       }
 
       // Convert all IDs to strings for comparison
       const hasPermission = userProjectIds.map(String).includes(projectId);
 
-      console.log('Has permission:', hasPermission);
       return hasPermission;
     }, [userProjectIds, project?.id]);
 
@@ -303,13 +299,11 @@ const TopPerformers = memo(({ onProjectSelect, userRole, refreshTrigger, onTabCh
     const loadUserData = async () => {
       try {
         if (userId) {
-          console.log('Loading data for user:', userId);
           const [userProjects, userProfile] = await Promise.all([
             fetchUserProjects(userId),
             fetchUserProfile(),
           ]);
 
-          console.log('Fetched user projects:', userProjects);
 
           setState((prev) => ({
             ...prev,

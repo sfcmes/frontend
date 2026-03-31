@@ -91,7 +91,6 @@ const ExcelUploadForm = () => {
             return obj;
           });
 
-          console.log('Converted JSON data (first item):', formattedData[0]);
           setData(formattedData);
           setError(null);
         } else {
@@ -207,7 +206,6 @@ const ExcelUploadForm = () => {
           let matchingSection = sections.find(section => section.name === component.section_name);
           
           if (!matchingSection) {
-            console.log(`Section "${component.section_name}" not found, creating it.`);
             try {
               matchingSection = await createSection({
                 name: component.section_name,
@@ -242,7 +240,6 @@ const ExcelUploadForm = () => {
           };
   
           const createdComponent = await createComponent(componentData);
-          console.log('Component created:', createdComponent);
   
           successfulSaves.push(component.name);
           setProgress(Math.floor(((i + 1) / totalComponents) * 100));

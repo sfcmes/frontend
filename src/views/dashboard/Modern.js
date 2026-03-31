@@ -65,7 +65,6 @@ const Modern = () => {
             }
           } catch (error) {
             // Silently handle auth errors - user is just not logged in
-            console.log('No authenticated user');
             setUserRole(null);
             setUserProjects([]);
           }

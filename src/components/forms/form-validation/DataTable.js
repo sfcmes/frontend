@@ -60,7 +60,6 @@ const DataTable = ({ data }) => {
   };
 
   const handleSave = (updatedRow) => {
-    console.log('Updated row:', updatedRow);
     setEditingRow(null);
   };
 

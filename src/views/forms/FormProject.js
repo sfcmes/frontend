@@ -138,7 +138,6 @@ const FormProject = () => {
   const fetchProjectsData = async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('Fetching projects with token:', token);
       api.setToken(token);
       const response = await fetchProjects();
       setProjects(response.data);

@@ -156,7 +156,6 @@ const fetchUserProfile = async () => {
         Authorization: `Bearer ${token}`,
       },
     });
-    console.log('User profile:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching user profile:', error.response?.data || error.message);
@@ -176,7 +175,6 @@ const fetchProjects = async () => {
   try {
     // Use regular projects endpoint since it's now public
     const response = await publicApi.get('/projects');
-    console.log('Fetched projects:', response.data);
     return response;
   } catch (error) {
     console.error('Error fetching projects:', error);
@@ -214,10 +212,8 @@ const fetchComponentsBySectionId = (sectionId) => api.get(`/components/section/$
 const fetchComponentsByProjectId = async (projectId) => {
   try {
     const response = await publicApi.get(`/components/project/${projectId}`);
-    console.log('API response:', response);
     return response.data;
   } catch (error) {
-    console.log(`No components found for project ${projectId}`);
     // Return empty arrays instead of throwing error
     return { precast: [], other: [] };
   }
@@ -226,7 +222,6 @@ const fetchComponentsByProjectId = async (projectId) => {
 const addComponentHistory = async (data) => {
   try {
     const response = await api.post('/components/componentHistory', data);
-    console.log('Component history added successfully:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error adding component history:', error.response ? error.response.data : error);
@@ -237,7 +232,6 @@ const addComponentHistory = async (data) => {
 const updateComponent = async (componentId, data) => {
   try {
     const response = await api.put(`/components/${componentId}`, data);
-    console.log('Update component response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error updating component:', error);
@@ -249,7 +243,6 @@ const updateComponent = async (componentId, data) => {
 // const fetchComponentById = async (componentId) => {
 //   try {
 //     const response = await api.get(`/components/${componentId}`);
-//     console.log('Fetched component details:', response.data);
 //     return response.data;
 //   } catch (error) {
 //     console.error('Error fetching component details:', error);
@@ -259,7 +252,6 @@ const updateComponent = async (componentId, data) => {
 const fetchComponentById = async (componentId) => {
   try {
     const response = await publicApi.get(`/components/${componentId}`);
-    console.log('Fetched component details:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching component details:', error);
@@ -358,7 +350,6 @@ const updateComponentStatus = async (componentId, newStatus, username) => {
       // Authenticated API call
       response = await api.put(`/components/${componentId}/status-auth`, { status: newStatus });
     }
-    console.log('Updated component status:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error updating component status:', error);
@@ -439,7 +430,6 @@ const uploadComponentFile = async (file, componentId) => {
         'Content-Type': 'multipart/form-data',
       },
     });
-    console.log('File upload response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error uploading component file:', error);
@@ -450,7 +440,6 @@ const uploadComponentFile = async (file, componentId) => {
 const createOtherComponent = async (data) => {
   try {
     const response = await api.post('/other-components', data);
-    console.log('Created other component:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error creating other component:', error);
@@ -512,7 +501,6 @@ const createPrecastComponent = async (formData) => {
 const fetchProjectsWithOtherComponents = async () => {
   try {
     const response = await publicApi.get('/other-components/projects-with-other-components');
-    console.log('Fetched projects with other components:', response.data);
     // ตรวจสอบโครงสร้างข้อมูล
     if (Array.isArray(response.data)) {
       return response.data.map(project => ({
@@ -775,7 +763,6 @@ const fetchUserProjects = async (userId) => {
         'If-None-Match': ''  // Force fresh response
       }
     });
-    console.log('User projects response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching user projects:', error);
@@ -849,7 +836,6 @@ const getProjectIdFromSectionId = async (sectionId) => {
 const checkUserProjectPermission = async (userId, projectId) => {
   try {
     const userProfile = await fetchUserProfile();
-    console.log('User profile:', userProfile); // Debug log
 
     // Admin always has permission
     if (userProfile.role === 'Admin') {
@@ -857,23 +843,15 @@ const checkUserProjectPermission = async (userId, projectId) => {
     }
 
     if (!projectId) {
-      console.log('No project ID provided');
       return { canEdit: false };
     }
 
     // For Site User, check project assignments
     const userProjects = await fetchUserProjects(userId);
-    console.log('User projects:', userProjects); // Debug log
 
     const hasProjectAccess = userProjects?.data?.some(project => 
       project.project_id?.toString() === projectId?.toString()
     );
-
-    console.log('Permission check result:', {
-      role: userProfile.role,
-      hasProjectAccess,
-      projectId
-    });
 
     return {
       canEdit: userProfile.role === 'Site User' && hasProjectAccess

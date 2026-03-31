@@ -17,7 +17,6 @@ const Units = () => {
   };
 
   const handleSaveData = (data) => {
-    console.log('Saving data', data); // Implement saving logic here
     handleCloseModal();
   };
 

@@ -82,17 +82,14 @@ const FVQRCodeReader = () => {
 
   const handleScan = async (result) => {
     if (result) {
-      console.log('QR code scanned:', result);
       try {
         const scannedData = JSON.parse(result.text);
-        console.log('Parsed QR code data:', scannedData);
         setQrCodeData(scannedData);
         setIsScanning(false);
         setScanningMessage('');
 
         // Fetch component data from API
         const component = await fetchComponentById(scannedData.id);
-        console.log('Fetched component data:', component);
         setComponentData(component);
         setNextStatus(statusFlow[component.status] || '');
         setModalData(JSON.stringify(component, null, 2));
@@ -257,7 +254,6 @@ const FVQRCodeReader = () => {
               delay={300}
               onResult={(result, error) => {
                 if (result) {
-                  console.log('Scan result:', result);
                   handleScan(result);
                 }
                 if (error) {

@@ -87,7 +87,6 @@ const ComponentDialog = memo(
       const checkPermissions = async () => {
         try {
           const userProfile = await fetchUserProfile();
-          console.log('Checking permissions for user:', userProfile);
 
           // Set user role first
           setState((prev) => ({ ...prev, userRole: userProfile.role }));
@@ -105,7 +104,6 @@ const ComponentDialog = memo(
           if (!projectId && component?.section_id) {
             try {
               projectId = await getProjectIdFromSectionId(component.section_id);
-              console.log('Got project ID from section:', projectId);
             } catch (error) {
               console.error('Error getting project ID from section:', error);
               setHasEditPermission(false);
@@ -114,17 +112,14 @@ const ComponentDialog = memo(
           }
 
           if (!projectId) {
-            console.log('No project ID found');
             setHasEditPermission(false);
             return;
           }
 
           // Check Site User permissions
           const userProjects = await fetchUserProjects(userProfile.id);
-          console.log('User projects:', userProjects);
 
           if (!Array.isArray(userProjects?.data)) {
-            console.log('No valid user projects data');
             setHasEditPermission(false);
             return;
           }
@@ -132,12 +127,6 @@ const ComponentDialog = memo(
           const hasAccess = userProjects.data.some(
             (project) => project.project_id?.toString() === projectId?.toString(),
           );
-
-          console.log('Permission check:', {
-            hasAccess,
-            userProjects: userProjects?.data,
-            projectId,
-          });
 
           setHasEditPermission(hasAccess);
         } catch (error) {
