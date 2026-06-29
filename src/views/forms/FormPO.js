@@ -130,16 +130,30 @@ const FormPO = () => {
 
   // ---- row actions ----
   const openEdit = async (po) => {
-    const res = await fetchPOById(po.id);
-    setEditPO(res.data);
-    setFormOpen(true);
+    try {
+      const res = await fetchPOById(po.id);
+      setEditPO(res.data);
+      setFormOpen(true);
+    } catch (err) {
+      setToast({ severity: 'error', msg: 'โหลดข้อมูลไม่สำเร็จ' });
+    }
   };
   const openCreate = () => { setEditPO(null); setFormOpen(true); };
-  const openOrdered = async (po) => { const r = await fetchPOById(po.id); setOrderedPO(r.data); };
-  const openReceived = async (po) => { const r = await fetchPOById(po.id); setReceivedPO(r.data); };
-  const openDetail = async (po) => { const r = await fetchPOById(po.id); setDetailPO(r.data); };
+  const openOrdered = async (po) => {
+    try { const r = await fetchPOById(po.id); setOrderedPO(r.data); }
+    catch (err) { setToast({ severity: 'error', msg: 'โหลดข้อมูลไม่สำเร็จ' }); }
+  };
+  const openReceived = async (po) => {
+    try { const r = await fetchPOById(po.id); setReceivedPO(r.data); }
+    catch (err) { setToast({ severity: 'error', msg: 'โหลดข้อมูลไม่สำเร็จ' }); }
+  };
+  const openDetail = async (po) => {
+    try { const r = await fetchPOById(po.id); setDetailPO(r.data); }
+    catch (err) { setToast({ severity: 'error', msg: 'โหลดข้อมูลไม่สำเร็จ' }); }
+  };
 
   const onDelete = async (po) => {
+    if (!window.confirm(`ลบใบสั่งซื้อ ${po.po_number}?`)) return;
     try {
       await deletePO(po.id);
       setToast({ severity: 'success', msg: 'ลบฉบับร่างแล้ว' });
@@ -220,7 +234,7 @@ const FormPO = () => {
           <TableBody>
             {filtered.map((po) => {
               const meta = STATUS_META[po.status] || { label: po.status, color: '#888' };
-              const isHi = highlightId && po.id === highlightId;
+              const isHi = highlightId && String(po.id) === highlightId;
               return (
                 <TableRow key={po.id} sx={isHi ? { background: 'rgba(93,135,255,.12)' } : undefined}>
                   <TableCell>{po.po_number}</TableCell>
