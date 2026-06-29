@@ -65,6 +65,7 @@ const FormProject = Loadable(lazy(() => import('../views/forms/FormProject')));
 const FormComponent = Loadable(lazy(() => import('../views/forms/FormComponent')));
 const FormSection = Loadable(lazy(() => import('../views/forms/FormSection')));
 const FormQRCodeReader = Loadable(lazy(() => import('../views/forms/FormQRCodeReader')));
+const FormPO = Loadable(lazy(() => import('../views/forms/FormPO')));
 const FormLayouts = Loadable(lazy(() => import('../views/forms/FormLayouts')));
 const FormCustom = Loadable(lazy(() => import('../views/forms/FormCustom')));
 const FormWizard = Loadable(lazy(() => import('../views/forms/FormWizard')));
@@ -144,6 +145,7 @@ const Router = [
       { path: '/forms/form-section', element: <FormSection /> },
       { path: '/forms/form-component', element: <FormComponent /> },
       { path: '/forms/form-qr-code-reader', element: <FormQRCodeReader /> },
+      { path: '/forms/form-po', element: <FormPO /> },
       { path: '/pages/qr-code', element: <QRCodePage /> },
     ],
   },

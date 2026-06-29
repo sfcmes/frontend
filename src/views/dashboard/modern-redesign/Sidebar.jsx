@@ -7,7 +7,7 @@ export const NAV = [
   { id: 'dashboard', icon: 'aperture', title: 'ภาพรวมสถานะโครงการ', path: '/dashboards/modern' },
   { label: 'การติดตามงาน', tag: 'ใหม่' },
   { id: 'pr', icon: 'clipboard-list', title: 'คำขอผลิต (PR)', badge: '8', path: null },
-  { id: 'po', icon: 'file-invoice', title: 'ใบสั่งซื้อวัตถุดิบ (PO)', badge: '5', path: null },
+  { id: 'po', icon: 'file-invoice', title: 'ใบสั่งซื้อวัตถุดิบ (PO)', path: '/forms/form-po' },
   { id: 'issues', icon: 'alert-triangle', title: 'ปัญหา / ข้อบกพร่อง', badge: '12', badgeColor: '#DC4B4B', path: null },
   { label: 'นำเข้าข้อมูลพรีคาสท์สู่ระบบ' },
   { id: 'new-project', icon: 'home-plus', title: 'สร้างโครงการใหม่', path: '/forms/form-project' },
