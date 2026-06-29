@@ -40,20 +40,9 @@ import PrintIcon from '@mui/icons-material/Print';
 import DownloadIcon from '@mui/icons-material/CloudDownload';
 import HistoryIcon from '@mui/icons-material/History';
 import DeleteIcon from '@mui/icons-material/Delete';
-import Breadcrumb from '../../../layouts/full/shared/breadcrumb/Breadcrumb';
 import PageContainer from '../../../components/container/PageContainer';
 import { createRoot } from 'react-dom/client';
 import logo from 'src/assets/images/logos/logo-main.svg';
-
-const BCrumb = [
-  {
-    to: '/',
-    title: 'Home',
-  },
-  {
-    title: 'สร้าง QR CODE',
-  },
-];
 
 const QR_HISTORY_KEY = 'qrCodeHistory';
 const MAX_HISTORY_ITEMS = 50;
@@ -459,7 +448,7 @@ const QRCodePage = () => {
 
   return (
     <PageContainer title="QRCODE" description="สร้าง QR CODE">
-      <Breadcrumb title="สร้าง QR CODE" items={BCrumb} />
+      <div className="mes-card" style={{ overflow: 'hidden' }}>
       <Box p={3}>
         <Typography variant="h4" gutterBottom>
           สร้างและค้นหา QR CODE สำหรับพิมพ์
@@ -729,6 +718,7 @@ const QRCodePage = () => {
           </Box>
         </Modal>
       </Box>
+      </div>
 
       {/* ส่วนที่เพิ่มเติมสำหรับฟีเจอร์ประวัติ */}
       <IconButton onClick={toggleHistory} style={{ position: 'fixed', bottom: 20, right: 20 }}>

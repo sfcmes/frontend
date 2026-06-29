@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  CardContent,
   Grid,
   Typography,
   TableContainer,
@@ -15,13 +14,9 @@ import {
   Stack,
 } from '@mui/material';
 import PageContainer from '../../components/container/PageContainer';
-import Breadcrumb from '../../layouts/full/shared/breadcrumb/Breadcrumb';
-import ParentCard from 'src/components/shared/ParentCard';
 import FVProject from '../../components/forms/form-validation/FVProject';
 import ProjectModal from './ProjectModal';
 import api, { fetchProjects, createProject, updateProject, deleteProject } from 'src/utils/api';
-
-const BCrumb = [{ to: '/', title: 'Home' }, { title: 'สร้างโครงการใหม่' }];
 
 const ProjectTable = ({ projects, onView, onEdit, onDelete }) => (
   <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 440 }}>
@@ -203,19 +198,26 @@ const FormProject = () => {
   };
   return (
     <PageContainer title="สร้างโครงการใหม่" description="This is the form to create a new project.">
-      <Breadcrumb title="สร้างโครงการใหม่" items={BCrumb} />
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         <Grid item xs={12} lg={6}>
-          <ParentCard title="ภาพรวมโครงการ">
-            <ProjectTable projects={projects} onView={handleViewProject} onEdit={handleEditProject} onDelete={handleDeleteProject} />
-          </ParentCard>
+          <div className="mes-card" style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--line)', fontWeight: 700, fontSize: '17px', color: 'var(--ink)' }}>
+              ภาพรวมโครงการ
+            </div>
+            <div style={{ padding: '20px' }}>
+              <ProjectTable projects={projects} onView={handleViewProject} onEdit={handleEditProject} onDelete={handleDeleteProject} />
+            </div>
+          </div>
         </Grid>
         <Grid item xs={12} lg={6}>
-          <ParentCard title="สร้างโครงการใหม่">
-            <CardContent>
+          <div className="mes-card" style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--line)', fontWeight: 700, fontSize: '17px', color: 'var(--ink)' }}>
+              สร้างโครงการใหม่
+            </div>
+            <div style={{ padding: '20px' }}>
               <FVProject onAddProject={handleAddProject} />
-            </CardContent>
-          </ParentCard>
+            </div>
+          </div>
         </Grid>
       </Grid>
       <ProjectModal

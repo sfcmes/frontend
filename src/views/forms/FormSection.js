@@ -14,13 +14,9 @@ import {
   Stack,
 } from '@mui/material';
 import PageContainer from '../../components/container/PageContainer';
-import Breadcrumb from '../../layouts/full/shared/breadcrumb/Breadcrumb';
-import ParentCard from 'src/components/shared/ParentCard';
-import EditSectionModal from './EditSectionModal'; // Import the EditSectionModal component
-import FVSection from '../../components/forms/form-validation/FVSection'; // Import FVSection
+import EditSectionModal from './EditSectionModal';
+import FVSection from '../../components/forms/form-validation/FVSection';
 import api, { createSection, updateSection, deleteSection } from '../../utils/api';
-
-const BCrumb = [{ to: '/', title: 'Home' }, { title: 'สร้างข้อมูลชั้นแต่ละโครงการ' }];
 
 const SectionTable = ({ sections, onEdit, onDelete }) => (
   <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 440 }}>
@@ -182,29 +178,38 @@ const FormSection = () => {
 
   return (
     <PageContainer title="สร้างชั้นของแต่ละโครงการ" description="this is Form create new project page">
-      <Breadcrumb title="สร้างชั้นของแต่ละโครงการ" items={BCrumb} />
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         <Grid item xs={12} lg={6}>
-          <ParentCard title="ภาพรวมแต่ละชั้นของแต่ละโครงการ">
-            <SectionTable 
-              sections={sections} 
-              onEdit={handleOpenEditModal} 
-              onDelete={handleDeleteSection} 
-            />
-          </ParentCard>
+          <div className="mes-card" style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--line)', fontWeight: 700, fontSize: '17px', color: 'var(--ink)' }}>
+              ภาพรวมแต่ละชั้นของแต่ละโครงการ
+            </div>
+            <div style={{ padding: '20px' }}>
+              <SectionTable
+                sections={sections}
+                onEdit={handleOpenEditModal}
+                onDelete={handleDeleteSection}
+              />
+            </div>
+          </div>
         </Grid>
         <Grid item xs={12} lg={6}>
-          <ParentCard title="สร้างชั้นของแต่ละโครงการ">
-            <FVSection onAddSection={handleAddSection} />
-          </ParentCard>
+          <div className="mes-card" style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--line)', fontWeight: 700, fontSize: '17px', color: 'var(--ink)' }}>
+              สร้างชั้นของแต่ละโครงการ
+            </div>
+            <div style={{ padding: '20px' }}>
+              <FVSection onAddSection={handleAddSection} />
+            </div>
+          </div>
         </Grid>
       </Grid>
-      <EditSectionModal 
-        open={isEditModalOpen} 
-        onClose={handleCloseEditModal} 
-        section={editingSection} 
-        onSave={handleEditSection} 
-        isEditing={true} // Ensure this modal is always used for editing
+      <EditSectionModal
+        open={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        section={editingSection}
+        onSave={handleEditSection}
+        isEditing={true}
       />
     </PageContainer>
   );

@@ -230,6 +230,11 @@ const BG_OPTIONS = [
   { value: 'flat', label: 'Flat' },
 ];
 
+const THEME_OPTIONS = [
+  { value: 'light', label: 'สว่าง' },
+  { value: 'dark', label: 'มืด' },
+];
+
 export function TweaksPanel({ tweaks, onChange, open, onClose }) {
   const panelRef = useRef(null);
   const offsetRef = useRef({ right: 16, bottom: 72 });
@@ -299,6 +304,11 @@ export function TweaksPanel({ tweaks, onChange, open, onClose }) {
         />
 
         <TweakSection label="ธีม & สี" />
+        <TweakRadio
+          label="โหมดสี" value={tweaks.theme}
+          options={THEME_OPTIONS}
+          onChange={(v) => set('theme', v)}
+        />
         <TweakColor
           label="สีหลัก (Accent)" value={tweaks.accent}
           options={ACCENT_OPTIONS}

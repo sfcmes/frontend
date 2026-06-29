@@ -1,34 +1,18 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import './styles.css';
-import { Sidebar } from './Sidebar';
+import { useOutletContext } from 'react-router-dom';
 import { Hero } from './Hero';
 import { ProjectTable } from './Table';
 import { RightPanel } from './RightPanel';
 import { ProjectDrawer } from './Drawer';
-import { TweaksPanel } from './TweaksPanel';
 import { aggregateStatus, transformProjectBasic, buildStatusFromComponents } from './utils';
 import { fetchProjects, fetchUserProjects, fetchComponentsByProjectId } from 'src/utils/api';
-import { useAuth } from 'src/contexts/AuthContext';
-
-const TWEAK_DEFAULTS = { viz: 'bar', accent: '#3D5A80', bg: 'sky', density: 3 };
-
-function loadTweaks() {
-  try {
-    const stored = localStorage.getItem('mes-tweaks');
-    return stored ? { ...TWEAK_DEFAULTS, ...JSON.parse(stored) } : TWEAK_DEFAULTS;
-  } catch {
-    return TWEAK_DEFAULTS;
-  }
-}
 
 const ModernDashboard = () => {
-  const { user, logout } = useAuth();
+  const { tweaks, user } = useOutletContext();
   const [projects, setProjects] = useState([]);
   const [selected, setSelected] = useState(null);
   const [drawer, setDrawer] = useState(null);
   const [userProjects, setUserProjects] = useState([]);
-  const [tweaks, setTweaks] = useState(loadTweaks);
-  const [tweaksOpen, setTweaksOpen] = useState(false);
 
   // Fetch all projects on mount, then enrich status counts from real component data
   useEffect(() => {
@@ -66,13 +50,6 @@ const ModernDashboard = () => {
       setUserProjects([]);
     }
   }, [user?.id, user?.role]);
-
-  // Persist tweaks to localStorage on every change
-  useEffect(() => {
-    try {
-      localStorage.setItem('mes-tweaks', JSON.stringify(tweaks));
-    } catch { /* ignore quota errors */ }
-  }, [tweaks]);
 
   // Aggregate stats: single project when selected, all projects otherwise
   const agg = useMemo(() => {
@@ -116,35 +93,26 @@ const ModernDashboard = () => {
   };
 
   return (
-    <div className="mes-app" data-bg={tweaks.bg} style={{ '--accent': tweaks.accent }}>
-      <Sidebar
-        collapsed={false}
+    <>
+      <Hero
+        agg={agg}
+        viz={tweaks.viz}
         accent={tweaks.accent}
-        user={user}
-        onLogout={logout}
+        projectCount={selected ? 1 : projects.length}
+        scope={selected ? selected.name : 'ทุกโครงการ'}
+        onReset={selected ? () => setSelected(null) : null}
       />
-
-      <div className="mes-main">
-        <Hero
-          agg={agg}
-          viz={tweaks.viz}
+      <div className="mes-work">
+        <ProjectTable
+          projects={projects}
           accent={tweaks.accent}
-          projectCount={selected ? 1 : projects.length}
-          scope={selected ? selected.name : 'ทุกโครงการ'}
-          onReset={selected ? () => setSelected(null) : null}
+          density={tweaks.density}
+          selectedId={selected?.id}
+          userRole={user?.role ?? null}
+          onSelect={handleSelect}
+          onOpen={handleOpen}
         />
-        <div className="mes-work">
-          <ProjectTable
-            projects={projects}
-            accent={tweaks.accent}
-            density={tweaks.density}
-            selectedId={selected?.id}
-            userRole={user?.role ?? null}
-            onSelect={handleSelect}
-            onOpen={handleOpen}
-          />
-          <RightPanel project={selected} userRole={user?.role ?? null} onOpen={handleOpen} />
-        </div>
+        <RightPanel project={selected} userRole={user?.role ?? null} onOpen={handleOpen} />
       </div>
 
       {drawer && (
@@ -156,23 +124,7 @@ const ModernDashboard = () => {
           canEdit={canEdit(drawer.id)}
         />
       )}
-
-      <TweaksPanel
-        tweaks={tweaks}
-        onChange={setTweaks}
-        open={tweaksOpen}
-        onClose={() => setTweaksOpen(false)}
-      />
-
-      <button
-        className="mes-tweaks-fab"
-        onClick={() => setTweaksOpen((o) => !o)}
-        title="Tweaks"
-        style={{ '--accent': tweaks.accent }}
-      >
-        ⚙
-      </button>
-    </div>
+    </>
   );
 };
 

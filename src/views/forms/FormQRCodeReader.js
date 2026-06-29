@@ -1,25 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@mui/material/styles';
 import { 
-  Stack, Typography, Avatar, Box, Button, Input, Paper, Divider,
+  Stack, Typography, Avatar, Box, Button, Input, Divider,
   Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import { IconMapPin, IconUpload } from '@tabler/icons';
 import { QrReader } from 'react-qr-reader';
 import jsQR from 'jsqr';
-import Breadcrumb from '../../layouts/full/shared/breadcrumb/Breadcrumb';
 import PageContainer from '../../components/container/PageContainer';
-import { createRoot } from 'react-dom/client';
-
-const BCrumb = [
-  {
-    to: '/',
-    title: 'Home',
-  },
-  {
-    title: 'สร้าง QR CODE',
-  },
-];
 
 const FVQRCodeReader = () => {
   const theme = useTheme();
@@ -169,16 +157,16 @@ const FVQRCodeReader = () => {
   ];
 
   return (
+    <PageContainer title="โปรแกรมอ่าน QR Code" description="QR code reader">
     <Box sx={{
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      mt: 5,
       mx: { xs: 2, md: 'auto' },
       maxWidth: '100%',
       width: 600,
     }}>
-      <Paper elevation={3} sx={{ p: 3, width: '100%' }}>
+      <div className="mes-card" style={{ padding: '20px', width: '100%' }}>
         <Stack spacing={3}>
           {stats.map((stat, i) => (
             <Box key={i}>
@@ -209,7 +197,7 @@ const FVQRCodeReader = () => {
             </Box>
           ))}
         </Stack>
-      </Paper>
+      </div>
 
       <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
         <Button color="primary" variant="contained" onClick={handleScanClick} disabled={!isMobile}>
@@ -270,6 +258,7 @@ const FVQRCodeReader = () => {
         </Alert>
       </Snackbar>
     </Box>
+    </PageContainer>
   );
 };
 

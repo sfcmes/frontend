@@ -2,14 +2,14 @@ import React, { lazy } from 'react';
 import { Navigate } from 'react-router-dom';
 
 import Loadable from '../layouts/full/shared/loadable/Loadable';
-import { element } from 'prop-types';
 
 /* ***Layouts**** */
 const FullLayout = Loadable(lazy(() => import('../layouts/full/FullLayout')));
 const BlankLayout = Loadable(lazy(() => import('../layouts/blank/BlankLayout')));
+const ModernLayout = Loadable(lazy(() => import('../views/dashboard/modern-redesign/ModernLayout')));
 
 /* ****Pages***** */
-const ModernDash = Loadable(lazy(() => import('../views/dashboard/Modern')));
+const ModernDash = Loadable(lazy(() => import('../views/dashboard/modern-redesign/ModernDashboard')));
 const EcommerceDash = Loadable(lazy(() => import('../views/dashboard/Ecommerce')));
 
 /* ****Apps***** */
@@ -42,7 +42,7 @@ const AccountSetting = Loadable(
 );
 const Faq = Loadable(lazy(() => import('../views/pages/faq/Faq')));
 const QRCodePage = Loadable(lazy(() => import('../views/pages/qrcode/QRCodePage')));
-const ComponentDetailsPage  = Loadable(lazy(() => import('../views/pages/qrcode/ComponentDetailsPage')));
+const ComponentDetailsPage = Loadable(lazy(() => import('../views/pages/qrcode/ComponentDetailsPage')));
 
 // widget
 const WidgetCards = Loadable(lazy(() => import('../views/widgets/cards/WidgetCards')));
@@ -60,7 +60,7 @@ const MuiSlider = Loadable(lazy(() => import('../views/forms/form-elements/MuiSl
 const MuiDateTime = Loadable(lazy(() => import('../views/forms/form-elements/MuiDateTime')));
 const MuiSwitch = Loadable(lazy(() => import('../views/forms/form-elements/MuiSwitch')));
 
-// form layout
+// MES form layouts
 const FormProject = Loadable(lazy(() => import('../views/forms/FormProject')));
 const FormComponent = Loadable(lazy(() => import('../views/forms/FormComponent')));
 const FormSection = Loadable(lazy(() => import('../views/forms/FormSection')));
@@ -106,52 +106,72 @@ const MuiTransferList = Loadable(lazy(() => import('../views/ui-components/MuiTr
 const MuiTypography = Loadable(lazy(() => import('../views/ui-components/MuiTypography')));
 
 // authentication
-
-// const Login2 = Loadable(lazy(() => import('../views/authentication/auth2/Login2')));
 const Register = Loadable(lazy(() => import('../views/authentication/auth1/Register')));
 const ManageUser = Loadable(lazy(() => import('../views/authentication/auth1/ManageUser')));
-// const Register2 = Loadable(lazy(() => import('../views/authentication/auth2/Register2')));
 const ForgotPassword = Loadable(lazy(() => import('../views/authentication/auth1/ForgotPassword')));
-// const ForgotPassword2 = Loadable(
-//   lazy(() => import('../views/authentication/auth2/ForgotPassword2')),
-// );
-// const TwoSteps = Loadable(lazy(() => import('../views/authentication/auth1/TwoSteps')));
-// const TwoSteps2 = Loadable(lazy(() => import('../views/authentication/auth2/TwoSteps2')));
 const Error = Loadable(lazy(() => import('../views/authentication/Error')));
-// const Maintenance = Loadable(lazy(() => import('../views/authentication/Maintenance')));
+const Login = Loadable(lazy(() => import('../views/authentication/auth1/Login')));
 
 // landingpage
 const Landingpage = Loadable(lazy(() => import('../views/pages/landingpage/Landingpage')));
 
-/* authentication */
-const Login = Loadable(lazy(() => import('../views/authentication/auth1/Login')));
-
-// New authentication wrapper component
+// Auth guard — redirects unauthenticated requests to login
 const AuthWrapper = ({ children }) => {
-  // Replace this with your actual authentication logic
-  const isAuthenticated = () => {
-    // Check if the user is logged in (e.g., by checking for a token in localStorage)
-    return localStorage.getItem('token') !== null;
-  };
-
-  if (!isAuthenticated()) {
-    // If not authenticated, only allow access to the Modern Dashboard or redirect to login
-    if (window.location.pathname !== '/dashboards/modern') {
-      return <Navigate to="/auth/login" />;
-    }
-  }
-
+  const isAuthenticated = () => localStorage.getItem('token') !== null;
+  if (!isAuthenticated()) return <Navigate to="/auth/login" />;
   return children;
 };
 
 const Router = [
+  // ── GROUP 1: Public MES dashboard ──────────────────────────────────────────
+  // ModernLayout with no auth gate. Dashboard is intentionally public.
+  {
+    path: '/',
+    element: <ModernLayout />,
+    children: [
+      { path: '/', element: <Navigate to="/dashboards/modern" /> },
+      { path: '/dashboards/modern', element: <ModernDash /> },
+    ],
+  },
+
+  // ── GROUP 2: Protected MES pages ───────────────────────────────────────────
+  // Auth required, ModernLayout — same sidebar + topbar as dashboard.
+  {
+    path: '/',
+    element: <AuthWrapper><ModernLayout /></AuthWrapper>,
+    children: [
+      { path: '/forms/form-project', element: <FormProject /> },
+      { path: '/forms/form-section', element: <FormSection /> },
+      { path: '/forms/form-component', element: <FormComponent /> },
+      { path: '/forms/form-qr-code-reader', element: <FormQRCodeReader /> },
+      { path: '/pages/qr-code', element: <QRCodePage /> },
+    ],
+  },
+
+  // ── GROUP 3: Public pages (auth, QR scan, card view) ───────────────────────
+  // BlankLayout — no sidebar, no auth gate.
+  {
+    path: '/',
+    element: <BlankLayout />,
+    children: [
+      { path: '/auth/login', element: <Login /> },
+      { path: '/auth/register', element: <Register /> },
+      { path: '/auth/manageuser', element: <ManageUser /> },
+      { path: '/auth/forgot-password', element: <ForgotPassword /> },
+      { path: '/auth/404', element: <Error /> },
+      { path: '/component/:id', element: <ComponentDetailsPage /> },
+      { path: '/forms/form-component-card/:id', element: <FormComponentCard /> },
+    ],
+  },
+
+  // ── GROUP 4: Protected template pages ──────────────────────────────────────
+  // Auth required, FullLayout — original MUI template shell.
+  // Only used for the UI template demo pages (apps, tables, charts, etc.).
+  // Catches all unmatched routes with the 404 wildcard.
   {
     path: '/',
     element: <AuthWrapper><FullLayout /></AuthWrapper>,
     children: [
-      { path: '/', element: <Navigate to="/dashboards/modern" /> },
-      { path: '/dashboards/modern', exact: true, element: <ModernDash /> },
-      // { path: '/dashboards/ecommerce', exact: true, element: <EcommerceDash /> },
       { path: '/apps/chats', element: <Chats /> },
       { path: '/apps/notes', element: <Notes /> },
       { path: '/apps/calendar', element: <Calendar /> },
@@ -174,10 +194,6 @@ const Router = [
       { path: '/pages/pricing', element: <Pricing /> },
       { path: '/pages/account-settings', element: <AccountSetting /> },
       { path: '/pages/faq', element: <Faq /> },
-      { path: '/forms/form-project', element: <FormProject/>},
-      { path: '/forms/form-section', element: <FormSection/>},
-      { path: '/forms/form-component', element: <FormComponent/>},
-      { path: '/forms/form-qr-code-reader', element: <FormQRCodeReader/>},
       { path: '/forms/form-elements/autocomplete', element: <MuiAutoComplete /> },
       { path: '/forms/form-elements/button', element: <MuiButton /> },
       { path: '/forms/form-elements/checkbox', element: <MuiCheckbox /> },
@@ -220,21 +236,6 @@ const Router = [
       { path: '/widgets/cards', element: <WidgetCards /> },
       { path: '/widgets/banners', element: <WidgetBanners /> },
       { path: '/widgets/charts', element: <WidgetCharts /> },
-      { path: '/pages/qr-code', element: <QRCodePage /> },
-      { path: '/component/:id', element: <ComponentDetailsPage /> },
-     
-    ],
-  },
-  {
-    path: '/',
-    element: <BlankLayout />,
-    children: [
-      { path: '/auth/404', element: <Error /> },
-      { path: '/auth/login', element: <Login /> },
-      { path: '/auth/register', element: <Register /> },
-      { path: '/auth/manageuser', element: <ManageUser /> },
-      { path: '*', element: <Navigate to="/auth/404" /> },
-      { path: '/forms/form-component-card/:id', element: <FormComponentCard/>},
       { path: '*', element: <Navigate to="/auth/404" /> },
     ],
   },

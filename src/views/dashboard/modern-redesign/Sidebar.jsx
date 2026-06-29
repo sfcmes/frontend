@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Icon } from './Primitives';
 
-const NAV = [
+export const NAV = [
   { label: 'HOME' },
   { id: 'dashboard', icon: 'aperture', title: 'ภาพรวมสถานะโครงการ', path: '/dashboards/modern' },
   { label: 'การติดตามงาน', tag: 'ใหม่' },
