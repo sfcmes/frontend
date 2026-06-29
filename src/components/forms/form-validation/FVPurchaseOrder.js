@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
@@ -52,11 +52,11 @@ const FVPurchaseOrder = ({
       .catch(() => setProjects([]));
   }, [open]);
 
-  const normalizeItems = (items) =>
-    (items || []).map((it) => ({ ...it, _key: it._key ?? newItemKey() }));
-  const start = initialValues
-    ? { ...initialValues, items: normalizeItems(initialValues.items) }
-    : blankValues(lockProjectId);
+  const start = useMemo(() => {
+    if (!initialValues) return blankValues(lockProjectId);
+    const items = (initialValues.items || []).map((it) => ({ ...it, _key: it._key ?? newItemKey() }));
+    return { ...initialValues, items };
+  }, [initialValues, lockProjectId]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
