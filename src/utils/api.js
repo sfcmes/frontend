@@ -863,6 +863,24 @@ const checkUserProjectPermission = async (userId, projectId) => {
 };
 
 
+// ---- Purchase Orders (PO) ----
+// Reads are public (dashboard + drawer must work without login).
+const fetchAllPOs = (params = {}) => publicApi.get('/po', { params });
+const fetchPOsByProject = (projectId) => publicApi.get(`/po/project/${projectId}`);
+const fetchPOById = (id) => publicApi.get(`/po/${id}`);
+
+// Mutations require auth.
+const createPO = (data) => api.post('/po', data);
+const updatePO = (id, data) => api.put(`/po/${id}`, data);
+const deletePO = (id) => api.delete(`/po/${id}`);
+const submitPO = (id) => api.post(`/po/${id}/submit`);
+// confirmPOOrdered: pass a FormData (externalPoNumber, expectedDeliveryDate, file?)
+const confirmPOOrdered = (id, formData) =>
+  api.post(`/po/${id}/ordered`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+const confirmPOReceived = (id, data) => api.post(`/po/${id}/received`, data);
+
 export {
   api,
   publicApi,
@@ -921,7 +939,16 @@ export {
   fetchOtherComponentsByProjectIdV2,
   updateOtherComponentDetails,
   deleteOtherComponentById,
-  getProjectIdFromSectionId ,
+  getProjectIdFromSectionId,
+  fetchAllPOs,
+  fetchPOsByProject,
+  fetchPOById,
+  createPO,
+  updatePO,
+  deletePO,
+  submitPO,
+  confirmPOOrdered,
+  confirmPOReceived,
 };
 
 export default api; // Keep the default export
