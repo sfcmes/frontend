@@ -43,7 +43,7 @@ const toFormValues = (po) => ({
 
 const FormPO = () => {
   const { user } = useAuth();
-  const isBuyer = user && user.role_name === 'buyer';
+  const isBuyer = user && (user.role === 'buyer' || user.role === 'Admin');
   const [params] = useSearchParams();
   const lockProjectId = params.get('project');
   const highlightId = params.get('highlight');
