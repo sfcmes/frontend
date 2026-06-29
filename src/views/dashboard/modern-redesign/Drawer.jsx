@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Icon, Donut, PipelineBar, QRCode } from './Primitives';
 import { STATUS, PIPE_ORDER, fmt, pct } from './utils';
-import { fetchSectionsByProjectId, fetchComponentsByProjectId, updateComponentStatus, fetchComponentsBySectionId, fetchComponentById } from 'src/utils/api';
+import { fetchSectionsByProjectId, fetchComponentsByProjectId, updateComponentStatus, fetchComponentsBySectionId, fetchComponentById, fetchPOsByProject } from 'src/utils/api';
+import { useNavigate } from 'react-router-dom';
 
 function Chip({ label, color }) {
   return (
@@ -384,19 +385,24 @@ export function ProjectDrawer({ project, onClose, onDataLoaded, onStatusUpdated 
   const [tab, setTab] = useState('overview');
   const [fullProject, setFullProject] = useState(null);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const [pos, setPos] = useState([]);
 
   useEffect(() => {
     setTab('overview');
     setFullProject(null);
+    setPos([]);
     if (!project) return;
 
     const load = async () => {
       setLoading(true);
       try {
-        const [secRes, compRes] = await Promise.all([
+        const [secRes, compRes, poRes] = await Promise.all([
           fetchSectionsByProjectId(project.id),
           fetchComponentsByProjectId(project.id),
+          fetchPOsByProject(project.id),
         ]);
+        setPos(poRes.data || []);
 
         const sections = Array.isArray(secRes.data) ? secRes.data : (Array.isArray(secRes) ? secRes : []);
         const allComps = [
@@ -469,7 +475,7 @@ export function ProjectDrawer({ project, onClose, onDataLoaded, onStatusUpdated 
     { id: 'overview', label: 'ภาพรวม', icon: 'aperture' },
     { id: 'pieces', label: 'ชิ้นงาน', icon: 'box', n: p.total },
     { id: 'pr', label: 'คำขอผลิต', icon: 'clipboard-list', n: records.pr.length },
-    { id: 'po', label: 'ใบสั่งซื้อ', icon: 'file-invoice', n: 0 },
+    { id: 'po', label: 'ใบสั่งซื้อ', icon: 'file-invoice', n: pos.length },
     { id: 'issues', label: 'ปัญหา', icon: 'alert-triangle', n: records.iss.length, danger: records.iss.length > 0 },
   ];
 
@@ -587,12 +593,41 @@ export function ProjectDrawer({ project, onClose, onDataLoaded, onStatusUpdated 
 
           {!loading && tab === 'po' && (
             <div className="dr-pad">
-              <RecordList
-                rows={records.po}
-                icon="file-invoice"
-                empty="ไม่มีใบสั่งซื้อค้างอยู่"
-                newLabel="สร้างใบสั่งซื้อ"
-              />
+              <div className="rec-bar">
+                <span>{pos.length} รายการ</span>
+                <button className="rec-new" onClick={() => navigate(`/forms/form-po?project=${p.id}`)}>
+                  <Icon name="plus" size={14} /> สร้างใบสั่งซื้อ
+                </button>
+              </div>
+              {pos.length ? (
+                <div className="rec-list">
+                  {pos.map((po) => {
+                    const meta = {
+                      draft: { label: 'ฉบับร่าง', color: '#566175' },
+                      submitted: { label: 'รอสั่งซื้อ', color: '#E08A00' },
+                      ordered: { label: 'สั่งซื้อแล้ว', color: '#5D87FF' },
+                      received: { label: 'รับของแล้ว', color: '#2E9E5B' },
+                    }[po.status] || { label: po.status, color: '#888' };
+                    return (
+                      <div
+                        key={po.id}
+                        className="rec-row"
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/forms/form-po?highlight=${po.id}`)}
+                      >
+                        <span className="rec-ic"><Icon name="file-invoice" size={17} /></span>
+                        <div className="rec-main">
+                          <div className="rec-label">{po.po_number}</div>
+                          <div className="rec-id">{po.item_count} รายการ</div>
+                        </div>
+                        <Chip label={meta.label} color={meta.color} />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rec-empty"><Icon name="circle-check" size={22} /> ยังไม่มีใบสั่งซื้อ</div>
+              )}
             </div>
           )}
 
