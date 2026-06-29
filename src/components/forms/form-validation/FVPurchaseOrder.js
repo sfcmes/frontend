@@ -12,12 +12,15 @@ const UNITS = ['m³', 'kg', 'ชิ้น', 'ม.', 'อื่นๆ'];
 
 const EMPTY_ITEM = { materialName: '', unit: 'ชิ้น', quantity: '', notes: '' };
 
+let _itemKeySeq = 0;
+const newItemKey = () => `it-${_itemKeySeq++}`;
+
 const blankValues = (lockProjectId) => ({
   projectId: lockProjectId || '',
   buyerEmail: '',
   requestedDeliveryDate: '',
   notes: '',
-  items: [{ ...EMPTY_ITEM }],
+  items: [{ ...EMPTY_ITEM, _key: newItemKey() }],
 });
 
 const schema = Yup.object({
@@ -49,7 +52,11 @@ const FVPurchaseOrder = ({
       .catch(() => setProjects([]));
   }, [open]);
 
-  const start = initialValues || blankValues(lockProjectId);
+  const normalizeItems = (items) =>
+    (items || []).map((it) => ({ ...it, _key: it._key ?? newItemKey() }));
+  const start = initialValues
+    ? { ...initialValues, items: normalizeItems(initialValues.items) }
+    : blankValues(lockProjectId);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -69,7 +76,15 @@ const FVPurchaseOrder = ({
               });
               return;
             }
-            await action(values);
+            const cleanValues = {
+              ...values,
+              items: values.items.map((it) => {
+                const clean = { ...it };
+                delete clean._key;
+                return clean;
+              }),
+            };
+            await action(cleanValues);
           };
 
           return (
@@ -122,7 +137,7 @@ const FVPurchaseOrder = ({
                         const itErr = (errors.items && errors.items[i]) || {};
                         const itTouch = (touched.items && touched.items[i]) || {};
                         return (
-                          <Grid container spacing={1} key={i} alignItems="flex-start">
+                          <Grid container spacing={1} key={item._key} alignItems="flex-start">
                             <Grid item xs={12} sm={4}>
                               <TextField
                                 fullWidth size="small" label="ชื่อวัสดุ"
@@ -169,7 +184,7 @@ const FVPurchaseOrder = ({
                         );
                       })}
                       <Box>
-                        <Button onClick={() => push({ ...EMPTY_ITEM })}>+ เพิ่มรายการ</Button>
+                        <Button onClick={() => push({ ...EMPTY_ITEM, _key: newItemKey() })}>+ เพิ่มรายการ</Button>
                       </Box>
                     </Stack>
                   )}
