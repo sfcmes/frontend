@@ -1,34 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Box,
-  TextField,
-  Typography,
-  Grid,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  IconButton,
-  Modal,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TableSortLabel,
-  Drawer,
-  Alert,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-} from '@mui/material';
-import SortIcon from '@mui/icons-material/Sort';
+// [MES] QRCodePage — generate, search, print, and save component QR codes.
+// QR generation / print / save / local-history logic identical to previous
+// implementation. Fixes the components response shape ({precast, other}).
+import { useState, useEffect, useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
+import { createRoot } from 'react-dom/client';
 import {
   fetchProjects,
   fetchComponentsByProjectId,
@@ -36,16 +12,23 @@ import {
   fetchSectionById,
   fetchSectionsByProjectId,
 } from 'src/utils/api';
-import PrintIcon from '@mui/icons-material/Print';
-import DownloadIcon from '@mui/icons-material/CloudDownload';
-import HistoryIcon from '@mui/icons-material/History';
-import DeleteIcon from '@mui/icons-material/Delete';
 import PageContainer from '../../../components/container/PageContainer';
-import { createRoot } from 'react-dom/client';
 import logo from 'src/assets/images/logos/logo-main.svg';
+import { Icon } from 'src/components/mes/Icon';
+import { StatusBadge } from 'src/components/mes/StatusBadge';
+import { Modal, EmptyState, CardHeader } from 'src/components/mes/ui';
 
 const QR_HISTORY_KEY = 'qrCodeHistory';
 const MAX_HISTORY_ITEMS = 50;
+
+// Canvas APIs can't resolve CSS var() — read the QR print tokens at runtime.
+const qrColors = () => {
+  const cs = getComputedStyle(document.documentElement);
+  return {
+    paper: cs.getPropertyValue('--qr-paper').trim() || 'white',
+    ink: cs.getPropertyValue('--qr-ink').trim() || 'black',
+  };
+};
 
 const QRCodePage = () => {
   const [projects, setProjects] = useState([]);
@@ -63,17 +46,12 @@ const QRCodePage = () => {
   const qrCodeRef = useRef(null);
   const [history, setHistory] = useState([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [noDataMessage, setNoDataMessage] = useState('');
 
   useEffect(() => {
-    const loadProjects = async () => {
-      try {
-        const response = await fetchProjects();
-        setProjects(response.data);
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-      }
-    };
-    loadProjects();
+    fetchProjects()
+      .then((res) => setProjects(res.data))
+      .catch(() => setProjects([]));
   }, []);
 
   useEffect(() => {
@@ -90,19 +68,16 @@ const QRCodePage = () => {
       componentName: component.name,
       timestamp: new Date().toLocaleString(),
     };
-
     setHistory((prevHistory) => {
       const updatedHistory = [newEntry, ...prevHistory].slice(0, MAX_HISTORY_ITEMS);
       try {
         localStorage.setItem(QR_HISTORY_KEY, JSON.stringify(updatedHistory));
-      } catch (error) {
-        console.error('localStorage is full:', error);
+      } catch {
         const reducedHistory = updatedHistory.slice(0, Math.floor(MAX_HISTORY_ITEMS / 2));
         try {
           localStorage.setItem(QR_HISTORY_KEY, JSON.stringify(reducedHistory));
           return reducedHistory;
-        } catch (retryError) {
-          console.error('Failed to save even after reducing items:', retryError);
+        } catch {
           return updatedHistory;
         }
       }
@@ -121,12 +96,6 @@ const QRCodePage = () => {
     localStorage.removeItem(QR_HISTORY_KEY);
   };
 
-  const toggleHistory = () => {
-    setIsHistoryOpen(!isHistoryOpen);
-  };
-
-  const [noDataMessage, setNoDataMessage] = useState('');
-
   const handleProjectChange = async (event) => {
     const projectId = event.target.value;
     setSelectedProject(projectId);
@@ -134,13 +103,15 @@ const QRCodePage = () => {
     try {
       const response = await fetchComponentsByProjectId(projectId);
       const sectionResponse = await fetchSectionsByProjectId(projectId);
-      setComponents(Array.isArray(response) ? response : []);
+      const list = Array.isArray(response)
+        ? response
+        : [...(response?.precast || []), ...(response?.other || [])];
+      setComponents(list);
       setSections(sectionResponse.data || []);
-      if (!Array.isArray(response) || response.length === 0) {
+      if (list.length === 0) {
         setNoDataMessage('ไม่พบข้อมูลสำหรับโครงการนี้');
       }
-    } catch (error) {
-      console.error('Error fetching components or sections:', error);
+    } catch {
       setComponents([]);
       setSections([]);
       setNoDataMessage('เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาลองใหม่อีกครั้ง');
@@ -153,102 +124,110 @@ const QRCodePage = () => {
       const sectionResponse = await fetchSectionById(component.section_id);
       const sectionName = sectionResponse.data ? sectionResponse.data.name : 'N/A';
       const projectName = projectResponse.data.name;
-
-      const qrCodeDetails = `บริษัทแสงฟ้าก่อสร้าง จำกัด\nโครงการ: ${projectName}\nชั้น: ${sectionName}\nชื่อชิ้นงาน: ${component.name}`;
-      setQrCodeDetails(qrCodeDetails);
-
-      // ใช้ URL ที่นำไปสู่ FormComponentCard โดยตรง
-      // const qrCodeUrl = `${window.location.origin}/forms/form-component-card/${component.id}`;
-      // const qrCodeUrl = `${window.location.origin}/api/components/qr/${component.id}`;
-      // const qrCodeUrl = `${window.location.origin}/qr/component/${component.id}`;
-      const qrCodeUrl = `${window.location.origin}/forms/form-component-card/${component.id}`;
-      setQrCodeData(qrCodeUrl);
+      setQrCodeDetails(`บริษัทแสงฟ้าก่อสร้าง จำกัด\nโครงการ: ${projectName}\nชั้น: ${sectionName}\nชื่อชิ้นงาน: ${component.name}`);
+      setQrCodeData(`${window.location.origin}/forms/form-component-card/${component.id}`);
       setIsModalOpen(true);
-    } catch (error) {
-      console.error('Error fetching project/section details:', error);
+    } catch {
+      /* detail fetch failed — QR modal not opened */
     }
+  };
+
+  const createQRCodeElement = (component, sectionName, projectName) => {
+    const qrCodeUrl = `${window.location.origin}/forms/form-component-card/${component.id}`;
+    const { paper, ink } = qrColors();
+
+    const qrCodeElement = document.createElement('div');
+    qrCodeElement.style.backgroundColor = paper;
+    qrCodeElement.style.padding = '20px';
+    qrCodeElement.style.display = 'inline-block';
+    qrCodeElement.style.textAlign = 'center';
+    qrCodeElement.id = 'qrCodeElement';
+
+    const qrCodeContainer = document.createElement('div');
+    qrCodeContainer.style.backgroundColor = paper;
+    qrCodeContainer.style.padding = '10px';
+    qrCodeContainer.style.display = 'inline-block';
+    qrCodeElement.appendChild(qrCodeContainer);
+
+    const qrCodeRoot = createRoot(qrCodeContainer);
+    qrCodeRoot.render(
+      <QRCodeCanvas
+        value={qrCodeUrl}
+        size={256}
+        bgColor={paper}
+        fgColor={ink}
+        level={'Q'}
+        includeMargin
+        imageSettings={{ src: logo, height: 48, width: 48, excavate: true }}
+      />,
+    );
+
+    const qrCodeText = document.createElement('p');
+    qrCodeText.style.color = ink;
+    qrCodeText.style.textAlign = 'center';
+    qrCodeText.style.marginTop = '10px';
+    qrCodeText.style.fontSize = '16px';
+    qrCodeText.style.fontWeight = '700';
+    qrCodeText.style.fontFamily = 'Arial, sans-serif';
+    qrCodeText.innerHTML = `
+    <span style="font-size: 18px; font-weight: 800;">บริษัทแสงฟ้าก่อสร้าง จำกัด</span><br />
+    <span style="font-size: 16px; font-weight: 700;">โครงการ: ${projectName}</span><br />
+    <span style="font-size: 16px; font-weight: 700;">ชั้น: ${sectionName || 'N/A'}</span><br />
+    <span style="font-size: 16px; font-weight: 800;">ชื่อชิ้นงาน: ${component.name}</span>`;
+    qrCodeElement.appendChild(qrCodeText);
+
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(qrCodeElement), 100);
+    });
   };
 
   const handleSave = async (component, sectionName, projectName) => {
     try {
-      // ตรวจสอบว่า component มีชื่อหรือไม่
-      if (!component.name) {
-        console.error('Component name is undefined:', component);
-        return;
-      }
-
-      // สร้าง QR code element
+      if (!component.name) return;
       const qrCodeElement = await createQRCodeElement(component, sectionName, projectName);
-      if (!qrCodeElement) {
-        console.error('Failed to create QR code element');
-        return;
-      }
-
-      // เพิ่ม QR code element เข้าไปใน DOM
+      if (!qrCodeElement) return;
       document.body.appendChild(qrCodeElement);
-
-      // รอให้ element ถูก render จนเสร็จสมบูรณ์
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      // ใช้ html2canvas เพื่อสร้างภาพจาก element
       const canvas = await html2canvas(qrCodeElement, {
         useCORS: true,
-        backgroundColor: 'white',
-        scale: 4, // เพิ่มความละเอียดเป็น 4 เท่า
+        backgroundColor: qrColors().paper,
+        scale: 4,
       });
-
-      // สร้าง Blob จาก canvas
       canvas.toBlob(
         (blob) => {
-          // สร้าง URL สำหรับ Blob
           const url = URL.createObjectURL(blob);
-
-          // สร้าง link element สำหรับดาวน์โหลด
           const link = document.createElement('a');
           link.download = `qr-code-${component.name}.png`;
           link.href = url;
-
-          // คลิกลิงก์เพื่อเริ่มการดาวน์โหลด
           link.click();
-
-          // ทำความสะอาด
           URL.revokeObjectURL(url);
           document.body.removeChild(qrCodeElement);
         },
         'image/png',
         1.0,
-      ); // ใช้คุณภาพสูงสุดสำหรับ PNG
+      );
       addToHistory('บันทึกแล้ว', component);
-    } catch (error) {
-      console.error('Error generating QR code: ', error);
+    } catch {
+      /* save failed silently, matching previous behavior */
     }
   };
 
   const handlePrint = async (component, sectionName, projectName) => {
     try {
-      if (!component.name) {
-        console.error('Component name is undefined:', component);
-        return;
-      }
+      if (!component.name) return;
       const qrCodeElement = await createQRCodeElement(component, sectionName, projectName);
-      if (!qrCodeElement) {
-        console.error('Failed to create QR code element');
-        return;
-      }
+      if (!qrCodeElement) return;
       document.body.appendChild(qrCodeElement);
 
       const canvas = await html2canvas(qrCodeElement, {
         useCORS: true,
-        backgroundColor: 'white',
+        backgroundColor: qrColors().paper,
       });
       const imgData = canvas.toDataURL('image/png');
 
       const printWindow = window.open('', '', 'width=600,height=600');
-      if (!printWindow) {
-        console.error('Failed to open print window');
-        return;
-      }
-
+      if (!printWindow) return;
       printWindow.document.open();
       printWindow.document.write(`
         <!DOCTYPE html>
@@ -257,15 +236,15 @@ const QRCodePage = () => {
           <title>Print QR Code</title>
           <style>
             @media print {
-              body { 
-                margin: 0; 
-                padding: 0; 
-                background-color: white;
+              body {
+                margin: 0;
+                padding: 0;
+                background-color: ${qrColors().paper};
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
               }
-              img { 
-                display: block; 
+              img {
+                display: block;
                 margin: auto;
                 max-width: 100%;
                 height: auto;
@@ -282,110 +261,9 @@ const QRCodePage = () => {
 
       document.body.removeChild(qrCodeElement);
       addToHistory('พิมพ์แล้ว', component);
-    } catch (error) {
-      console.error('Error generating QR code: ', error);
+    } catch {
+      /* print failed silently, matching previous behavior */
     }
-  };
-
-  const createQRCodeElement = (component, sectionName, projectName) => {
-    const qrCodeUrl = `${window.location.origin}/forms/form-component-card/${component.id}`;
-
-    const qrCodeElement = document.createElement('div');
-    qrCodeElement.style.backgroundColor = 'white';
-    qrCodeElement.style.padding = '20px';
-    qrCodeElement.style.display = 'inline-block';
-    qrCodeElement.style.textAlign = 'center';
-    qrCodeElement.id = 'qrCodeElement';
-
-    const qrCodeContainer = document.createElement('div');
-    qrCodeContainer.style.backgroundColor = 'white';
-    qrCodeContainer.style.padding = '10px';
-    qrCodeContainer.style.display = 'inline-block';
-    qrCodeElement.appendChild(qrCodeContainer);
-
-    const qrCodeRoot = createRoot(qrCodeContainer);
-    qrCodeRoot.render(
-      <QRCodeCanvas
-        value={qrCodeUrl}
-        size={256}
-        bgColor={'#ffffff'}
-        fgColor={'#000000'}
-        level={'Q'}
-        includeMargin={true}
-        imageSettings={{
-          src: logo,
-          x: undefined,
-          y: undefined,
-          height: 48,
-          width: 48,
-          excavate: true,
-        }}
-      />,
-    );
-
-    const qrCodeText = document.createElement('p');
-    qrCodeText.style.color = 'black';
-    qrCodeText.style.textAlign = 'center';
-    qrCodeText.style.marginTop = '10px';
-    // เพิ่มการกำหนดขนาดฟอนต์, ความเข้ม, และ font-family
-    qrCodeText.style.fontSize = '16px'; // เพิ่มขนาดฟอนต์เล็กน้อย
-    qrCodeText.style.fontWeight = '700'; // ใช้ความหนามากขึ้น (700 คือ bold)
-    qrCodeText.style.fontFamily = 'Arial, sans-serif'; // ใช้ฟอนต์ที่อ่านง่ายเมื่อพิมพ์
-    // ใช้ template literals เพื่อกำหนดสไตล์แยกแต่ละบรรทัด
-    qrCodeText.innerHTML = `
-    <span style="font-size: 18px; font-weight: 800;">บริษัทแสงฟ้าก่อสร้าง จำกัด</span><br />
-    <span style="font-size: 16px; font-weight: 700;">โครงการ: ${projectName}</span><br />
-    <span style="font-size: 16px; font-weight: 700;">ชั้น: ${sectionName || 'N/A'}</span><br />
-    <span style="font-size: 16px; font-weight: 800;">ชื่อชิ้นงาน: ${component.name}</span>`;
-    qrCodeElement.appendChild(qrCodeText);
-
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(qrCodeElement), 100);
-    });
-  };
-
-  const renderQRCode = (qrCodeValue, qrCodeDetails, size = 256) => {
-    return (
-      <Box sx={{ textAlign: 'center', p: 2 }}>
-        <Paper
-          elevation={3}
-          sx={{
-            display: 'inline-block',
-            p: 2,
-            backgroundColor: 'white',
-          }}
-          ref={qrCodeRef}
-        >
-          <Box
-            sx={{
-              backgroundColor: 'white',
-              padding: '10px',
-              display: 'inline-block',
-            }}
-          >
-            <QRCodeCanvas
-              value={qrCodeValue}
-              size={size}
-              bgColor={'#ffffff'}
-              fgColor={'#000000'}
-              level={'Q'}
-              includeMargin={true}
-              imageSettings={{
-                src: logo,
-                x: undefined,
-                y: undefined,
-                height: 48,
-                width: 48,
-                excavate: true,
-              }}
-            />
-          </Box>
-          <Typography mt={2} variant="body1" whiteSpace="pre-line" sx={{ color: 'black' }}>
-            {qrCodeDetails}
-          </Typography>
-        </Paper>
-      </Box>
-    );
   };
 
   const handleSort = (column) => {
@@ -397,387 +275,322 @@ const QRCodePage = () => {
     }
   };
 
-  const filteredComponents = Array.isArray(components)
-    ? components.filter((component) => {
-        const section = sections.find((s) => s.id === component.section_id);
-        return (
-          (filterSection === '' || section?.name === filterSection) &&
-          (filterType === '' || component.type === filterType) &&
-          (component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            section?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            component.type.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
-      })
-    : [];
+  const filteredComponents = components.filter((component) => {
+    const section = sections.find((s) => s.id === component.section_id);
+    return (
+      (filterSection === '' || section?.name === filterSection) &&
+      (filterType === '' || component.type === filterType) &&
+      ((component.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (section?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (component.type || '').toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  });
 
-  const sortedComponents = filteredComponents.sort((a, b) => {
+  const sortedComponents = [...filteredComponents].sort((a, b) => {
     const sectionA = sections.find((s) => s.id === a.section_id)?.name || '';
     const sectionB = sections.find((s) => s.id === b.section_id)?.name || '';
-
-    const projectNameA = projects.find((p) => p.id === selectedProject)?.name || '';
-    const projectNameB = projects.find((p) => p.id === selectedProject)?.name || '';
-
-    let valueA, valueB;
-
+    let valueA;
+    let valueB;
     switch (sortColumn) {
-      case 'project':
-        valueA = projectNameA.toLowerCase();
-        valueB = projectNameB.toLowerCase();
-        break;
       case 'section':
         valueA = sectionA.toLowerCase();
         valueB = sectionB.toLowerCase();
         break;
       case 'name':
-        valueA = a.name.toLowerCase();
-        valueB = b.name.toLowerCase();
+        valueA = (a.name || '').toLowerCase();
+        valueB = (b.name || '').toLowerCase();
         break;
       default:
         return 0;
     }
-
-    if (valueA < valueB) {
-      return sortDirection === 'asc' ? -1 : 1;
-    }
-    if (valueA > valueB) {
-      return sortDirection === 'asc' ? 1 : -1;
-    }
+    if (valueA < valueB) return sortDirection === 'asc' ? -1 : 1;
+    if (valueA > valueB) return sortDirection === 'asc' ? 1 : -1;
     return 0;
   });
 
+  const projectName = projects.find((p) => p.id === selectedProject)?.name;
+  const { paper, ink } = qrColors();
+
+  const sortHead = (col, label) => (
+    <button
+      className="inline-flex items-center gap-1 font-semibold text-mes-muted hover:text-mes-text"
+      onClick={() => handleSort(col)}
+    >
+      {label}
+      {sortColumn === col && <Icon name={sortDirection === 'asc' ? 'chevron-up' : 'chevron-down'} size={13} />}
+    </button>
+  );
+
+  const rowActions = (component, sectionName) => (
+    <div className="flex gap-1">
+      <button
+        className="mes-btn mes-btn-ghost !min-h-touch md:!min-h-0 !px-3 md:!py-1.5"
+        onClick={() => handleSave(component, sectionName, projectName)}
+        aria-label="ดาวน์โหลด QR"
+        title="ดาวน์โหลด QR"
+      >
+        <Icon name="download" size={16} />
+      </button>
+      <button
+        className="mes-btn mes-btn-ghost !min-h-touch md:!min-h-0 !px-3 md:!py-1.5"
+        onClick={() => handlePrint(component, sectionName, projectName)}
+        aria-label="พิมพ์ QR"
+        title="พิมพ์ QR"
+      >
+        <Icon name="printer" size={16} />
+      </button>
+    </div>
+  );
 
   return (
     <PageContainer title="QRCODE" description="สร้าง QR CODE">
-      <div className="mes-card" style={{ overflow: 'hidden' }}>
-      <Box p={3}>
-        <Typography variant="h4" gutterBottom>
-          สร้างและค้นหา QR CODE สำหรับพิมพ์
-        </Typography>
-        <Grid container spacing={3} my={2}>
-          <Grid item xs={12} sm={3}>
-            <FormControl fullWidth>
-              <InputLabel>เลือกโครงการ</InputLabel>
-              <Select value={selectedProject} onChange={handleProjectChange} label="เลือกโครงการ">
-                <MenuItem value="">
-                  <em>เลือกโครงการ</em>
-                </MenuItem>
-                {projects.map((project) => (
-                  <MenuItem key={project.id || project._id} value={project.id || project._id}>
-                    {project.name || project.projectName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <TextField
-              fullWidth
-              label="ค้นหาด้วยชื่อชิ้นงาน, ชั้น หรือประเภท"
+      <div className="mes-card">
+        <CardHeader
+          title="สร้างและค้นหา QR CODE สำหรับพิมพ์"
+          right={
+            <button className="mes-btn mes-btn-ghost" onClick={() => setIsHistoryOpen(true)}>
+              <Icon name="clock" size={16} /> ประวัติการทำงาน
+            </button>
+          }
+        />
+
+        <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 md:p-5">
+          <div>
+            <label className="mes-label" htmlFor="qr-project">เลือกโครงการ</label>
+            <select id="qr-project" className="mes-input" value={selectedProject} onChange={handleProjectChange}>
+              <option value="">เลือกโครงการ</option>
+              {projects.map((project) => (
+                <option key={project.id || project._id} value={project.id || project._id}>
+                  {project.name || project.projectName}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mes-label" htmlFor="qr-search">ค้นหาด้วยชื่อชิ้นงาน, ชั้น หรือประเภท</label>
+            <input
+              id="qr-search"
+              className="mes-input"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <FormControl fullWidth>
-              <InputLabel>ตัวกรองชั้น</InputLabel>
-              <Select
-                value={filterSection}
-                onChange={(e) => setFilterSection(e.target.value)}
-                label="Filter by Section"
-              >
-                <MenuItem value="">ทั้งหมด</MenuItem>
-                {sections.map((section) => (
-                  <MenuItem key={section.id} value={section.name}>
-                    {section.name}
-                  </MenuItem>
+          </div>
+          <div>
+            <label className="mes-label" htmlFor="qr-filter-section">ตัวกรองชั้น</label>
+            <select id="qr-filter-section" className="mes-input" value={filterSection} onChange={(e) => setFilterSection(e.target.value)}>
+              <option value="">ทั้งหมด</option>
+              {sections.map((section) => (
+                <option key={section.id} value={section.name}>{section.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mes-label" htmlFor="qr-filter-type">ตัวกรองประเภท</label>
+            <select id="qr-filter-type" className="mes-input" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+              <option value="">ทั้งหมด</option>
+              {components
+                .map((component) => component.type)
+                .filter((value, index, self) => value && self.indexOf(value) === index)
+                .map((type) => (
+                  <option key={type} value={type}>{type}</option>
                 ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <FormControl fullWidth>
-              <InputLabel>ตัวกรองประเภท</InputLabel>
-              <Select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                label="Filter by Type"
-              >
-                <MenuItem value="">ทั้งหมด</MenuItem>
-                {Array.isArray(components)
-                  ? components
-                      .map((component) => component.type)
-                      .filter((value, index, self) => self.indexOf(value) === index)
-                      .map((type) => (
-                        <MenuItem key={type} value={type}>
-                          {type}
-                        </MenuItem>
-                      ))
-                  : null}
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
-        <TableContainer component={Paper} sx={{ mt: 3 }}>
-          {noDataMessage ? (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="h6">{noDataMessage}</Typography>
-              <Typography variant="body1">
-                กรุณาเลือกโครงการอื่น หรือติดต่อผู้ดูแลระบบเพื่อเพิ่มข้อมูล
-              </Typography>
-            </Box>
-          ) : !Array.isArray(components) || components.length === 0 ? (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="h6">ไม่พบข้อมูลสำหรับโครงการนี้</Typography>
-              <Typography variant="body1">
-                กรุณาเลือกโครงการอื่น หรือติดต่อผู้ดูแลระบบเพื่อเพิ่มข้อมูล
-              </Typography>
-            </Box>
-          ) : (
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortColumn === 'project'}
-                      direction={sortColumn === 'project' ? sortDirection : 'asc'}
-                      onClick={() => handleSort('project')}
-                      IconComponent={SortIcon}
-                    >
-                      โครงการ
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortColumn === 'section'}
-                      direction={sortColumn === 'section' ? sortDirection : 'asc'}
-                      onClick={() => handleSort('section')}
-                      IconComponent={SortIcon}
-                    >
-                      ชั้น
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortColumn === 'name'}
-                      direction={sortColumn === 'name' ? sortDirection : 'asc'}
-                      onClick={() => handleSort('name')}
-                      IconComponent={SortIcon}
-                    >
-                      ชื่อชิ้นงาน
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>ประเภทชิ้นงาน</TableCell>
-                  <TableCell>ความกว้าง (mm.)</TableCell>
-                  <TableCell>ความสูง (mm.)</TableCell>
-                  <TableCell>น้ำหนัก (ton.)</TableCell>
-                  <TableCell>สถานะ</TableCell>
-                  <TableCell align="center" sx={{ width: '100px' }}>
-                    QR Code
-                  </TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sortedComponents.map((component) => {
-                  const section = sections.find((s) => s.id === component.section_id);
-                  const sectionName = section?.name || 'N/A';
-                  const projectName = projects.find((p) => p.id === selectedProject)?.name;
-                  const qrCodeUrl = `${window.location.origin}/forms/form-component-card/${component.id}`;
-                  return (
-                    <TableRow key={component.id}>
-                      <TableCell>{projectName}</TableCell>
-                      <TableCell>{sectionName}</TableCell>
-                      <TableCell>{component.name}</TableCell>
-                      <TableCell>{component.type}</TableCell>
-                      <TableCell>{component.width}</TableCell>
-                      <TableCell>{component.height}</TableCell>
-                      <TableCell>{component.weight || 'N/A'}</TableCell>
-                      <TableCell>{component.status || 'N/A'}</TableCell>
-                      <TableCell align="center">
-                        <Box
-                          sx={{
-                            cursor: 'pointer',
-                            width: '40px',
-                            height: '40px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            margin: 'auto',
-                            borderRadius: '4px',
-                            overflow: 'hidden',
-                            backgroundColor: 'white',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                            transition: 'transform 0.2s, box-shadow 0.2s',
-                            '&:hover': {
-                              transform: 'scale(1.1)',
-                              boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-                            },
-                          }}
-                          onClick={() => handleQRCodeClick(component)}
-                        >
-                          <QRCodeCanvas
-                            value={qrCodeUrl}
-                            size={40}
-                            bgColor={'#ffffff'}
-                            fgColor={'#000000'}
-                            level={'Q'}
-                            includeMargin={false}
-                            imageSettings={{
-                              src: logo,
-                              x: undefined,
-                              y: undefined,
-                              height: 12,
-                              width: 12,
-                              excavate: true,
-                            }}
-                          />
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <IconButton onClick={() => handleSave(component, sectionName, projectName)}>
-                          <DownloadIcon />
-                        </IconButton>
-                        <IconButton
-                          onClick={() => handlePrint(component, sectionName, projectName)}
-                        >
-                          <PrintIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </TableContainer>
-        <Modal
-          open={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          aria-labelledby="qr-code-modal"
-          aria-describedby="qr-code-description"
-        >
-          <Box
-            sx={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: 400,
-              bgcolor: 'background.paper',
-              boxShadow: 24,
-              p: 4,
-              borderRadius: 2,
-            }}
-          >
-            <Typography id="qr-code-modal" variant="h6" component="h2" align="center" gutterBottom>
-              บริษัทแสงฟ้าก่อสร้าง จำกัด
-            </Typography>
-            <div>{renderQRCode(qrCodeData, qrCodeDetails)}</div>
-            <Grid container spacing={2} justifyContent="center" mt={2}>
-              <Grid item>
-                <Button
-                  onClick={() => {
-                    const component = sortedComponents.find(
-                      (comp) => comp.id === qrCodeData.split('/').pop(),
+            </select>
+          </div>
+        </div>
+
+        {noDataMessage || components.length === 0 ? (
+          <EmptyState
+            icon="qrcode"
+            title={noDataMessage || 'ไม่พบข้อมูลสำหรับโครงการนี้'}
+            hint="กรุณาเลือกโครงการอื่น หรือติดต่อผู้ดูแลระบบเพื่อเพิ่มข้อมูล"
+          />
+        ) : (
+          <>
+            {/* base: cards */}
+            <div className="flex flex-col gap-2 p-3 md:hidden">
+              {sortedComponents.map((component) => {
+                const section = sections.find((s) => s.id === component.section_id);
+                const sectionName = section?.name || 'N/A';
+                return (
+                  <div key={component.id} className="mes-card p-3">
+                    <div className="flex items-center gap-3">
+                      <button
+                        className="shrink-0 rounded-sm p-1"
+                        style={{ background: paper }}
+                        onClick={() => handleQRCodeClick(component)}
+                        aria-label="ดู QR Code"
+                      >
+                        <QRCodeCanvas
+                          value={`${window.location.origin}/forms/form-component-card/${component.id}`}
+                          size={44} bgColor={paper} fgColor={ink} level={'Q'}
+                        />
+                      </button>
+                      <div className="min-w-0 grow">
+                        <div className="truncate text-sm font-semibold">{component.name}</div>
+                        <div className="text-xs text-mes-muted">{sectionName} · {component.type || '—'}</div>
+                        <div className="mt-1"><StatusBadge status={component.status} size="sm" /></div>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-center gap-4 text-xs text-mes-muted tabular-nums">
+                      <span>ก {component.width} มม.</span>
+                      <span>ส {component.height} มม.</span>
+                      <span>{component.weight ? `${component.weight} ตัน` : '—'}</span>
+                      <span className="ml-auto">{rowActions(component, sectionName)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* md+: table */}
+            <div className="hidden md:block">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="mes-th">โครงการ</th>
+                    <th className="mes-th">{sortHead('section', 'ชั้น')}</th>
+                    <th className="mes-th">{sortHead('name', 'ชื่อชิ้นงาน')}</th>
+                    <th className="mes-th">ประเภทชิ้นงาน</th>
+                    <th className="mes-th text-right">ความกว้าง (mm.)</th>
+                    <th className="mes-th text-right">ความสูง (mm.)</th>
+                    <th className="mes-th text-right">น้ำหนัก (ton.)</th>
+                    <th className="mes-th">สถานะ</th>
+                    <th className="mes-th text-center">QR Code</th>
+                    <th className="mes-th" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedComponents.map((component) => {
+                    const section = sections.find((s) => s.id === component.section_id);
+                    const sectionName = section?.name || 'N/A';
+                    return (
+                      <tr key={component.id} className="hover:bg-mes-surface-2">
+                        <td className="mes-td"><span className="block max-w-[160px] truncate">{projectName}</span></td>
+                        <td className="mes-td">{sectionName}</td>
+                        <td className="mes-td font-semibold">{component.name}</td>
+                        <td className="mes-td">{component.type || '—'}</td>
+                        <td className="mes-td text-right">{component.width}</td>
+                        <td className="mes-td text-right">{component.height}</td>
+                        <td className="mes-td text-right">{component.weight || 'N/A'}</td>
+                        <td className="mes-td"><StatusBadge status={component.status} size="sm" /></td>
+                        <td className="mes-td text-center">
+                          <button
+                            className="inline-flex rounded-sm p-1 transition-transform hover:scale-110"
+                            style={{ background: paper }}
+                            onClick={() => handleQRCodeClick(component)}
+                            aria-label="ดู QR Code"
+                          >
+                            <QRCodeCanvas
+                              value={`${window.location.origin}/forms/form-component-card/${component.id}`}
+                              size={40} bgColor={paper} fgColor={ink} level={'Q'}
+                            />
+                          </button>
+                        </td>
+                        <td className="mes-td">{rowActions(component, sectionName)}</td>
+                      </tr>
                     );
-                    if (component) {
-                      handleSave(
-                        component,
-                        qrCodeDetails.split('\n')[2].split(': ')[1],
-                        qrCodeDetails.split('\n')[1].split(': ')[1],
-                      );
-                    }
-                  }}
-                  variant="contained"
-                  color="primary"
-                >
-                  Save
-                </Button>
-              </Grid>
-              <Grid item>
-                <Button
-                  onClick={() => {
-                    const component = sortedComponents.find(
-                      (comp) => comp.id === qrCodeData.split('/').pop(),
-                    );
-                    if (component) {
-                      handlePrint(
-                        component,
-                        qrCodeDetails.split('\n')[2].split(': ')[1],
-                        qrCodeDetails.split('\n')[1].split(': ')[1],
-                      );
-                    }
-                  }}
-                  variant="contained"
-                  color="secondary"
-                >
-                  Print
-                </Button>
-              </Grid>
-            </Grid>
-          </Box>
-        </Modal>
-      </Box>
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* ส่วนที่เพิ่มเติมสำหรับฟีเจอร์ประวัติ */}
-      <IconButton onClick={toggleHistory} style={{ position: 'fixed', bottom: 20, right: 20 }}>
-        <HistoryIcon />
-      </IconButton>
+      {/* QR detail modal */}
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="บริษัทแสงฟ้าก่อสร้าง จำกัด"
+        footer={
+          <>
+            <button
+              className="mes-btn mes-btn-ghost"
+              onClick={() => {
+                const component = sortedComponents.find((comp) => comp.id === qrCodeData.split('/').pop());
+                if (component) {
+                  handleSave(
+                    component,
+                    qrCodeDetails.split('\n')[2].split(': ')[1],
+                    qrCodeDetails.split('\n')[1].split(': ')[1],
+                  );
+                }
+              }}
+            >
+              <Icon name="download" size={15} /> บันทึก
+            </button>
+            <button
+              className="mes-btn mes-btn-primary"
+              onClick={() => {
+                const component = sortedComponents.find((comp) => comp.id === qrCodeData.split('/').pop());
+                if (component) {
+                  handlePrint(
+                    component,
+                    qrCodeDetails.split('\n')[2].split(': ')[1],
+                    qrCodeDetails.split('\n')[1].split(': ')[1],
+                  );
+                }
+              }}
+            >
+              <Icon name="printer" size={15} /> พิมพ์
+            </button>
+          </>
+        }
+      >
+        <div className="flex justify-center">
+          <div className="inline-block rounded-md p-4 text-center" style={{ background: paper }} ref={qrCodeRef}>
+            <QRCodeCanvas
+              value={qrCodeData}
+              size={220}
+              bgColor={paper}
+              fgColor={ink}
+              level={'Q'}
+              includeMargin
+              imageSettings={{ src: logo, height: 42, width: 42, excavate: true }}
+            />
+            <p className="mt-2 whitespace-pre-line text-sm font-semibold" style={{ color: ink }}>
+              {qrCodeDetails}
+            </p>
+          </div>
+        </div>
+      </Modal>
 
-      <Drawer anchor="right" open={isHistoryOpen} onClose={toggleHistory}>
-        <Box sx={{ width: 300, p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            ประวัติการทำงาน
-          </Typography>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            ประวัติจะถูกบันทึกเฉพาะในอุปกรณ์และเบราวเซอร์นี้เท่านั้น
-          </Alert>
-          <List>
+      {/* History sheet */}
+      <Modal
+        open={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        title="ประวัติการทำงาน"
+        footer={
+          <button className="mes-btn mes-btn-danger" onClick={clearAllHistory}>
+            <Icon name="trash" size={15} /> ล้างประวัติทั้งหมด
+          </button>
+        }
+      >
+        <div className="mb-3 rounded-sm border border-mes-border bg-mes-surface-2 px-3 py-2 text-xs text-mes-muted">
+          ประวัติจะถูกบันทึกเฉพาะในอุปกรณ์และเบราวเซอร์นี้เท่านั้น
+        </div>
+        {history.length === 0 ? (
+          <EmptyState icon="clock" title="ยังไม่มีประวัติ" />
+        ) : (
+          <div className="flex flex-col gap-1.5">
             {history.map((entry) => (
-              <ListItem key={entry.id}>
-                <ListItemText
-                  primary={`${entry.action} ${entry.componentName}`}
-                  secondary={entry.timestamp}
-                />
-                <ListItemSecondaryAction>
-                  <IconButton
-                    edge="end"
-                    aria-label="print"
-                    onClick={() => handlePrint(/* pass necessary args */)}
-                  >
-                    <PrintIcon />
-                  </IconButton>
-                  <IconButton
-                    edge="end"
-                    aria-label="download"
-                    onClick={() => handleSave(/* pass necessary args */)}
-                  >
-                    <DownloadIcon />
-                  </IconButton>
-                  <IconButton
-                    edge="end"
-                    aria-label="delete"
-                    onClick={() => deleteHistoryItem(entry.id)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </ListItemSecondaryAction>
-              </ListItem>
+              <div key={entry.id} className="flex items-center gap-3 rounded-sm border border-mes-border px-3 py-2">
+                <div className="min-w-0 grow">
+                  <div className="truncate text-sm">{entry.action} {entry.componentName}</div>
+                  <div className="text-xs text-mes-muted">{entry.timestamp}</div>
+                </div>
+                <button
+                  className="mes-btn mes-btn-ghost !min-h-touch !px-3"
+                  onClick={() => deleteHistoryItem(entry.id)}
+                  aria-label="ลบรายการประวัติ"
+                >
+                  <Icon name="trash" size={15} />
+                </button>
+              </div>
             ))}
-          </List>
-          <Button
-            variant="contained"
-            color="secondary"
-            startIcon={<DeleteIcon />}
-            onClick={clearAllHistory}
-            fullWidth
-            sx={{ mt: 2 }}
-          >
-            ล้างประวัติทั้งหมด
-          </Button>
-        </Box>
-      </Drawer>
+          </div>
+        )}
+      </Modal>
     </PageContainer>
   );
 };

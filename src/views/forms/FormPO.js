@@ -1,31 +1,26 @@
+// [MES] FormPO — purchase order management: status tabs, list, action dialogs.
+// Business logic identical to previous implementation; window.confirm → ConfirmDialog.
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import {
-  Box, Stack, Typography, Button, Tabs, Tab, Chip, Snackbar, Alert,
-  Table, TableHead, TableRow, TableCell, TableBody, CircularProgress,
-} from '@mui/material';
 import { useAuth } from 'src/contexts/AuthContext';
 import {
   fetchAllPOs, fetchPOById, createPO, updatePO, deletePO, submitPO,
   confirmPOOrdered, confirmPOReceived,
 } from 'src/utils/api';
+import { Icon } from 'src/components/mes/Icon';
+import { StatusBadge } from 'src/components/mes/StatusBadge';
+import { PO_STATUS } from 'src/components/mes/status-meta';
+import { ConfirmDialog, EmptyState, Spinner, useToast, CardHeader } from 'src/components/mes/ui';
 import FVPurchaseOrder from 'src/components/forms/form-validation/FVPurchaseOrder';
 import POOrderedDialog from './po-dialogs/POOrderedDialog';
 import POReceivedDialog from './po-dialogs/POReceivedDialog';
 import PODetailDialog from './po-dialogs/PODetailDialog';
 
-const STATUS_META = {
-  draft:     { label: 'ฉบับร่าง',   color: '#566175' },
-  submitted: { label: 'รอสั่งซื้อ', color: '#E08A00' },
-  ordered:   { label: 'สั่งซื้อแล้ว', color: '#5D87FF' },
-  received:  { label: 'รับของแล้ว', color: '#2E9E5B' },
-};
-
 const TABS = [
   { key: 'all', label: 'ทั้งหมด' },
-  { key: 'submitted', label: 'รอดำเนินการ' },
-  { key: 'ordered', label: 'สั่งซื้อแล้ว' },
-  { key: 'received', label: 'รับของแล้ว' },
+  { key: 'submitted', label: PO_STATUS.submitted.th },
+  { key: 'ordered', label: PO_STATUS.ordered.th },
+  { key: 'received', label: PO_STATUS.received.th },
 ];
 
 // Map a PO row to FVPurchaseOrder initialValues for editing a draft.
@@ -41,6 +36,8 @@ const toFormValues = (po) => ({
   })),
 });
 
+const dateStr = (d) => (d ? String(d).slice(0, 10) : '-');
+
 const FormPO = () => {
   const { user } = useAuth();
   const isBuyer = user && (user.role === 'buyer' || user.role === 'Admin');
@@ -51,15 +48,15 @@ const FormPO = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('all');
-  const [toast, setToast] = useState(null); // { severity, msg }
+  const { showToast, toastNode } = useToast();
 
   const [formOpen, setFormOpen] = useState(false);
-  const [editPO, setEditPO] = useState(null);     // full po for edit, or null for create
+  const [editPO, setEditPO] = useState(null);
   const [orderedPO, setOrderedPO] = useState(null);
   const [receivedPO, setReceivedPO] = useState(null);
   const [detailPO, setDetailPO] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
-  // Memoize to avoid giving FVPurchaseOrder a new object every render
   const editInitialValues = useMemo(() => (editPO ? toFormValues(editPO) : null), [editPO]);
 
   const load = useCallback(async () => {
@@ -67,12 +64,12 @@ const FormPO = () => {
     try {
       const res = await fetchAllPOs();
       setRows(res.data || []);
-    } catch (err) {
-      setToast({ severity: 'error', msg: 'โหลดข้อมูลไม่สำเร็จ' });
+    } catch {
+      showToast('โหลดข้อมูลไม่สำเร็จ', 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -96,10 +93,10 @@ const FormPO = () => {
     try {
       await persistDraft(values);
       setFormOpen(false);
-      setToast({ severity: 'success', msg: 'บันทึกฉบับร่างแล้ว' });
+      showToast('บันทึกฉบับร่างแล้ว');
       load();
-    } catch (err) {
-      setToast({ severity: 'error', msg: 'บันทึกไม่สำเร็จ' });
+    } catch {
+      showToast('บันทึกไม่สำเร็จ', 'error');
     }
   };
 
@@ -115,51 +112,49 @@ const FormPO = () => {
       const sres = await submitPO(id);
       setFormOpen(false);
       if (sres.data && sres.data.emailSent === false) {
-        setToast({
-          severity: 'warning',
-          msg: 'บันทึกสำเร็จ แต่ส่งอีเมลไม่ได้ กรุณาแจ้งผู้จัดซื้อด้วยตนเอง',
-        });
+        showToast('บันทึกสำเร็จ แต่ส่งอีเมลไม่ได้ กรุณาแจ้งผู้จัดซื้อด้วยตนเอง', 'warn');
       } else {
-        setToast({ severity: 'success', msg: 'ส่งให้ผู้จัดซื้อและแจ้งอีเมลแล้ว' });
+        showToast('ส่งให้ผู้จัดซื้อและแจ้งอีเมลแล้ว');
       }
       load();
-    } catch (err) {
-      setToast({ severity: 'error', msg: 'ส่งไม่สำเร็จ' });
+    } catch {
+      showToast('ส่งไม่สำเร็จ', 'error');
     }
   };
 
   // ---- row actions ----
+  const withPO = (setter) => async (po) => {
+    try {
+      const res = await fetchPOById(po.id);
+      setter(res.data);
+    } catch {
+      showToast('โหลดข้อมูลไม่สำเร็จ', 'error');
+    }
+  };
   const openEdit = async (po) => {
     try {
       const res = await fetchPOById(po.id);
       setEditPO(res.data);
       setFormOpen(true);
-    } catch (err) {
-      setToast({ severity: 'error', msg: 'โหลดข้อมูลไม่สำเร็จ' });
+    } catch {
+      showToast('โหลดข้อมูลไม่สำเร็จ', 'error');
     }
   };
   const openCreate = () => { setEditPO(null); setFormOpen(true); };
-  const openOrdered = async (po) => {
-    try { const r = await fetchPOById(po.id); setOrderedPO(r.data); }
-    catch (err) { setToast({ severity: 'error', msg: 'โหลดข้อมูลไม่สำเร็จ' }); }
-  };
-  const openReceived = async (po) => {
-    try { const r = await fetchPOById(po.id); setReceivedPO(r.data); }
-    catch (err) { setToast({ severity: 'error', msg: 'โหลดข้อมูลไม่สำเร็จ' }); }
-  };
-  const openDetail = async (po) => {
-    try { const r = await fetchPOById(po.id); setDetailPO(r.data); }
-    catch (err) { setToast({ severity: 'error', msg: 'โหลดข้อมูลไม่สำเร็จ' }); }
-  };
+  const openOrdered = withPO(setOrderedPO);
+  const openReceived = withPO(setReceivedPO);
+  const openDetail = withPO(setDetailPO);
 
-  const onDelete = async (po) => {
-    if (!window.confirm(`ลบใบสั่งซื้อ ${po.po_number}?`)) return;
+  const onDelete = async () => {
+    const po = deleteTarget;
+    setDeleteTarget(null);
+    if (!po) return;
     try {
       await deletePO(po.id);
-      setToast({ severity: 'success', msg: 'ลบฉบับร่างแล้ว' });
+      showToast('ลบฉบับร่างแล้ว');
       load();
-    } catch (err) {
-      setToast({ severity: 'error', msg: 'ลบไม่สำเร็จ' });
+    } catch {
+      showToast('ลบไม่สำเร็จ', 'error');
     }
   };
 
@@ -167,10 +162,10 @@ const FormPO = () => {
     try {
       await confirmPOOrdered(orderedPO.id, formData);
       setOrderedPO(null);
-      setToast({ severity: 'success', msg: 'ยืนยันสั่งซื้อแล้ว' });
+      showToast('ยืนยันสั่งซื้อแล้ว');
       load();
-    } catch (err) {
-      setToast({ severity: 'error', msg: 'ยืนยันไม่สำเร็จ' });
+    } catch {
+      showToast('ยืนยันไม่สำเร็จ', 'error');
     }
   };
 
@@ -178,84 +173,120 @@ const FormPO = () => {
     try {
       await confirmPOReceived(receivedPO.id, payload);
       setReceivedPO(null);
-      setToast({ severity: 'success', msg: 'ยืนยันรับของแล้ว' });
+      showToast('ยืนยันรับของแล้ว');
       load();
-    } catch (err) {
-      setToast({ severity: 'error', msg: 'ยืนยันไม่สำเร็จ' });
+    } catch {
+      showToast('ยืนยันไม่สำเร็จ', 'error');
     }
   };
 
-  const renderActions = (po) => {
+  const actions = (po) => {
     if (po.status === 'draft') {
       return (
-        <Stack direction="row" spacing={1}>
-          <Button size="small" onClick={() => openEdit(po)}>แก้ไข</Button>
-          <Button size="small" color="error" onClick={() => onDelete(po)}>ลบ</Button>
-        </Stack>
+        <div className="flex gap-1.5">
+          <button className="mes-btn mes-btn-ghost !min-h-touch md:!min-h-0 md:!py-1.5 text-xs" onClick={() => openEdit(po)}>แก้ไข</button>
+          <button className="mes-btn mes-btn-danger !min-h-touch md:!min-h-0 md:!py-1.5 text-xs" onClick={() => setDeleteTarget(po)}>ลบ</button>
+        </div>
       );
     }
     if (po.status === 'submitted' && isBuyer) {
-      return <Button size="small" variant="contained" onClick={() => openOrdered(po)}>ยืนยันสั่งซื้อ</Button>;
+      return <button className="mes-btn mes-btn-primary !min-h-touch md:!min-h-0 md:!py-1.5 text-xs" onClick={() => openOrdered(po)}>ยืนยันสั่งซื้อ</button>;
     }
     if (po.status === 'ordered' && isBuyer) {
-      return <Button size="small" variant="contained" onClick={() => openReceived(po)}>ยืนยันรับของ</Button>;
+      return <button className="mes-btn mes-btn-primary !min-h-touch md:!min-h-0 md:!py-1.5 text-xs" onClick={() => openReceived(po)}>ยืนยันรับของ</button>;
     }
-    return <Button size="small" onClick={() => openDetail(po)}>ดูรายละเอียด</Button>;
+    return <button className="mes-btn mes-btn-ghost !min-h-touch md:!min-h-0 md:!py-1.5 text-xs" onClick={() => openDetail(po)}>ดูรายละเอียด</button>;
   };
 
   return (
-    <Box className="mes-card" sx={{ p: 3 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        <Typography variant="h5">ใบสั่งซื้อวัตถุดิบ (PO)</Typography>
-        <Button variant="contained" onClick={openCreate}>+ สร้าง PO ใหม่</Button>
-      </Stack>
+    <div className="mes-card">
+      <CardHeader
+        title="ใบสั่งซื้อวัตถุดิบ (PO)"
+        right={
+          <button className="mes-btn mes-btn-primary" onClick={openCreate}>
+            <Icon name="plus" size={15} /> สร้าง PO ใหม่
+          </button>
+        }
+      />
 
-      <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ mb: 2 }}>
-        {TABS.map((t) => <Tab key={t.key} value={t.key} label={t.label} />)}
-      </Tabs>
+      <div className="flex gap-1 overflow-x-auto border-b border-mes-border px-3 pt-2">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`min-h-touch md:min-h-0 whitespace-nowrap rounded-t-sm px-3 py-2 text-sm font-semibold border-b-2 -mb-px ${
+              tab === t.key ? 'border-mes-accent text-mes-accent' : 'border-transparent text-mes-muted hover:text-mes-text'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
       {loading ? (
-        <Box display="flex" justifyContent="center" py={6}><CircularProgress /></Box>
+        <Spinner />
       ) : filtered.length === 0 ? (
-        <Alert severity="info">ไม่พบใบสั่งซื้อ</Alert>
+        <EmptyState icon="file-invoice" title="ไม่พบใบสั่งซื้อ" />
       ) : (
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>เลขที่ PO</TableCell>
-              <TableCell>โครงการ</TableCell>
-              <TableCell align="right">รายการ</TableCell>
-              <TableCell>วันที่สร้าง</TableCell>
-              <TableCell>กำหนดส่ง</TableCell>
-              <TableCell>สถานะ</TableCell>
-              <TableCell align="right">การจัดการ</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+        <>
+          {/* base: cards */}
+          <div className="flex flex-col gap-2 p-3 md:hidden">
             {filtered.map((po) => {
-              const meta = STATUS_META[po.status] || { label: po.status, color: '#888' };
               const isHi = highlightId && String(po.id) === highlightId;
               return (
-                <TableRow key={po.id} sx={isHi ? { background: 'rgba(93,135,255,.12)' } : undefined}>
-                  <TableCell>{po.po_number}</TableCell>
-                  <TableCell>{po.project_name}</TableCell>
-                  <TableCell align="right">{po.item_count}</TableCell>
-                  <TableCell>{po.created_at ? String(po.created_at).slice(0, 10) : '-'}</TableCell>
-                  <TableCell>
-                    {po.requested_delivery_date ? String(po.requested_delivery_date).slice(0, 10) : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      size="small" label={meta.label}
-                      sx={{ background: meta.color, color: '#fff' }}
-                    />
-                  </TableCell>
-                  <TableCell align="right">{renderActions(po)}</TableCell>
-                </TableRow>
+                <div key={po.id} className={`mes-card p-3 ${isHi ? 'border-mes-accent' : ''}`}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm font-semibold">{po.po_number}</span>
+                    <span className="ml-auto"><StatusBadge status={po.status} kind="po" /></span>
+                  </div>
+                  <div className="mt-1 truncate text-sm text-mes-muted">{po.project_name}</div>
+                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-mes-muted tabular-nums">
+                    <span>{po.item_count} รายการ</span>
+                    <span>วันที่สร้าง {dateStr(po.created_at)}</span>
+                    <span>กำหนดส่ง {dateStr(po.requested_delivery_date)}</span>
+                  </div>
+                  <div className="mt-2">{actions(po)}</div>
+                </div>
               );
             })}
-          </TableBody>
-        </Table>
+          </div>
+          {/* md+: table */}
+          <div className="hidden md:block">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className="mes-th">เลขที่ PO</th>
+                  <th className="mes-th">โครงการ</th>
+                  <th className="mes-th text-right">รายการ</th>
+                  <th className="mes-th">วันที่สร้าง</th>
+                  <th className="mes-th">กำหนดส่ง</th>
+                  <th className="mes-th">สถานะ</th>
+                  <th className="mes-th text-right">การจัดการ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((po) => {
+                  const isHi = highlightId && String(po.id) === highlightId;
+                  return (
+                    <tr
+                      key={po.id}
+                      className={isHi ? 'bg-mes-surface-2' : ''}
+                      style={isHi ? { boxShadow: 'inset 3px 0 0 var(--mes-accent)' } : undefined}
+                    >
+                      <td className="mes-td font-mono">{po.po_number}</td>
+                      <td className="mes-td"><span className="block max-w-[240px] truncate">{po.project_name}</span></td>
+                      <td className="mes-td text-right">{po.item_count}</td>
+                      <td className="mes-td">{dateStr(po.created_at)}</td>
+                      <td className="mes-td">{dateStr(po.requested_delivery_date)}</td>
+                      <td className="mes-td"><StatusBadge status={po.status} kind="po" /></td>
+                      <td className="mes-td"><div className="flex justify-end">{actions(po)}</div></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <FVPurchaseOrder
@@ -279,16 +310,17 @@ const FormPO = () => {
         onClose={() => setDetailPO(null)}
       />
 
-      <Snackbar
-        open={Boolean(toast)} autoHideDuration={5000}
-        onClose={() => setToast(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        {toast ? (
-          <Alert severity={toast.severity} onClose={() => setToast(null)}>{toast.msg}</Alert>
-        ) : undefined}
-      </Snackbar>
-    </Box>
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={onDelete}
+        title="ลบใบสั่งซื้อ"
+        message={`ลบใบสั่งซื้อ ${deleteTarget?.po_number || ''}?`}
+        confirmLabel="ลบ"
+        danger
+      />
+      {toastNode}
+    </div>
   );
 };
 

@@ -1,73 +1,33 @@
-import React, { useEffect, useState } from 'react';
-import {
-  CardContent,
-  Typography,
-  Button,
-  Box,
-  Stack,
-  Avatar,
-  AvatarGroup,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Snackbar,
-  Alert,
-} from '@mui/material';
-import BlankCard from '../../components/shared/BlankCard';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
-import DescriptionIcon from '@mui/icons-material/Description';
-import { fetchProjectDetailsByComponentId, updateComponentStatus } from 'src/utils/api';
-
-const statusTranslation = {
-  planning: 'รอผลิต',
-  manufactured: 'ผลิตแล้ว',
-  transported: 'อยู่ระหว่างขนส่ง',
-  accepted: 'ตรวจรับแล้ว',
-  installed: 'ติดตั้งแล้ว',
-  rejected: 'ถูกปฏิเสธ',
-};
+// [MES] ComponentCard — QR-landing action card: status, files, accept/reject,
+// status history. Status advance/reject logic identical to previous implementation.
+// Labels now come from the canonical status-meta (fixes the transported label
+// conflict — CONTEXT.md decision 2026-07-02).
+import { useEffect, useState } from 'react';
+import { fetchProjectDetailsByComponentId } from 'src/utils/api';
+import { Icon } from 'src/components/mes/Icon';
+import { StatusBadge } from 'src/components/mes/StatusBadge';
+import { COMPONENT_STATUS, resolveComponentStatus } from 'src/components/mes/status-meta';
+import { Timeline } from 'src/components/mes/charts';
+import { ConfirmDialog, useToast } from 'src/components/mes/ui';
 
 const statusOrder = ['planning', 'manufactured', 'transported', 'accepted', 'installed'];
 
 const ComponentCard = ({ component, onOpenFile, onStatusChange, disableActions, isAdmin }) => {
-  const [projectDetails, setProjectDetails] = useState({ project_name: '', project_code: '' });
   const [statusHistory, setStatusHistory] = useState([]);
   const [openRejectDialog, setOpenRejectDialog] = useState(false);
-  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const { showToast, toastNode } = useToast();
 
   useEffect(() => {
     const loadComponentData = async () => {
       try {
         const details = await fetchProjectDetailsByComponentId(component.id);
-        setProjectDetails(details.projectDetails);
         setStatusHistory(details.statusHistory || []);
-      } catch (error) {
-        console.error('Failed to load component data:', error);
+      } catch {
         setStatusHistory([]);
       }
     };
-
     loadComponentData();
   }, [component.id]);
-
-  const getStatusStyle = (status) => {
-    switch (status) {
-      case 'planning': return { bg: 'info.light', color: 'info.main' };
-      case 'manufactured': return { bg: 'primary.light', color: 'primary.main' };
-      case 'transported': return { bg: 'warning.light', color: 'warning.main' };
-      case 'accepted': return { bg: 'success.light', color: 'success.main' };
-      case 'installed': return { bg: 'secondary.light', color: 'secondary.main' };
-      case 'rejected': return { bg: 'error.light', color: 'error.main' };
-      default: return { bg: 'grey.light', color: 'grey.main' };
-    }
-  };
-
-  const statusStyle = getStatusStyle(component.status);
 
   const getNextStatus = (currentStatus) => {
     const currentIndex = statusOrder.indexOf(currentStatus);
@@ -79,184 +39,121 @@ const ComponentCard = ({ component, onOpenFile, onStatusChange, disableActions, 
 
   const handleAccept = async () => {
     if (disableActions) return;
-    try {
-      let newStatus;
-      if (isAdmin) {
-        newStatus = getNextStatus(component.status);
-      } else if (component.status === 'transported') {
-        newStatus = 'accepted';
-      }
-
-      if (newStatus) {
-        await onStatusChange(newStatus);
-        setOpenSnackbar(true);
-      }
-    } catch (error) {
-      console.error('Failed to update component status:', error);
+    let newStatus;
+    if (isAdmin) {
+      newStatus = getNextStatus(component.status);
+    } else if (component.status === 'transported') {
+      newStatus = 'accepted';
+    }
+    if (newStatus) {
+      await onStatusChange(newStatus);
+      showToast('อัพเดทสถานะชิ้นงานเรียบร้อยแล้ว!');
     }
   };
 
   const handleRejectConfirm = async () => {
+    setOpenRejectDialog(false);
     if (disableActions) return;
-    try {
-      await onStatusChange('rejected');
-      setOpenRejectDialog(false);
-    } catch (error) {
-      console.error('Failed to reject component:', error);
-    }
-  };
-
-  const handleCloseSnackbar = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-    setOpenSnackbar(false);
+    await onStatusChange('rejected');
   };
 
   const canAccept = isAdmin || component.status === 'transported';
   const nextStatus = getNextStatus(component.status);
 
   return (
-    <BlankCard>
-      <CardContent>
-        <Box display="flex" alignItems="center" mb={3}>
-          <Avatar sx={{ width: 60, height: 60, bgcolor: 'primary.main', mr: 2 }}>
-            {component.name.charAt(0)}
-          </Avatar>
-          <Box>
-            <Typography variant="h5" fontWeight="500">
-              {component.name}
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              รหัสชิ้นงาน: {component.id}
-            </Typography>
-          </Box>
-        </Box>
+    <div className="mes-card p-4">
+      <div className="flex items-center gap-3">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-mes-accent text-lg font-bold text-mes-accent-ink">
+          {component.name.charAt(0)}
+        </div>
+        <div className="min-w-0">
+          <div className="truncate text-lg font-bold">{component.name}</div>
+          <div className="truncate font-mono text-xs text-mes-muted">รหัสชิ้นงาน: {component.id}</div>
+        </div>
+      </div>
 
-        <Stack direction="row" spacing={2} alignItems="center" mb={3}>
-          <Chip
-            label={statusTranslation[component.status] || component.status}
-            sx={{
-              bgcolor: statusStyle.bg,
-              color: statusStyle.color,
-              fontWeight: 'medium',
-            }}
-            size="small"
-          />
-          <Typography variant="body2" color="textSecondary">
-            <CalendarTodayIcon fontSize="small" sx={{ verticalAlign: 'text-bottom', mr: 0.5 }} />
-            อัพเดทล่าสุด: {new Date(component.updated_at).toLocaleDateString('th-TH')}
-          </Typography>
-        </Stack>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <StatusBadge status={component.status} />
+        <span className="inline-flex items-center gap-1.5 text-xs text-mes-muted">
+          <Icon name="calendar" size={13} />
+          อัพเดทล่าสุด: {new Date(component.updated_at).toLocaleDateString('th-TH')}
+        </span>
+      </div>
 
-        <Typography variant="body2" mb={3}>
-          {component.description}
-        </Typography>
+      {component.description && (
+        <p className="mt-3 text-sm text-mes-muted">{component.description}</p>
+      )}
 
-        <Stack direction="row" spacing={2} mb={3}>
-          <AvatarGroup max={3}>
-            {component.files &&
-              component.files.map((file, index) => (
-                <Avatar key={index} sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
-                  <DescriptionIcon fontSize="small" />
-                </Avatar>
-              ))}
-          </AvatarGroup>
-          <Typography variant="body2" color="textSecondary" alignSelf="center">
-            {component.files ? component.files.length : 0} ไฟล์แบบ
-          </Typography>
-        </Stack>
+      <div className="mt-3 flex items-center gap-2 text-sm text-mes-muted">
+        <Icon name="file-text" size={16} />
+        {component.files ? component.files.length : 0} ไฟล์แบบ
+      </div>
 
-        <Stack spacing={2}>
-          {canAccept && (isAdmin ? nextStatus : true) && (
-            <Button
-              size="large"
-              variant="contained"
-              color="primary"
-              startIcon={<CheckCircleIcon />}
-              onClick={handleAccept}
-              fullWidth
-              disabled={disableActions || component.status === 'installed'}
-            >
-              {isAdmin 
-                ? `อัพเดทเป็น ${statusTranslation[nextStatus]}`
-                : 'ยอมรับชิ้นงาน'}
-            </Button>
-          )}
-          <Button
-            size="large"
-            variant="outlined"
-            color="error"
-            startIcon={<CancelIcon />}
-            onClick={() => setOpenRejectDialog(true)}
-            fullWidth
-            disabled={component.status === 'rejected' || disableActions}
+      <div className="mt-4 flex flex-col gap-2">
+        {canAccept && (isAdmin ? nextStatus : true) && (
+          <button
+            className="mes-btn mes-btn-primary w-full"
+            onClick={handleAccept}
+            disabled={disableActions || component.status === 'installed'}
           >
-            ปฏิเสธชิ้นงาน
-          </Button>
-          <Button
-            size="large"
-            variant="text"
-            color="primary"
-            startIcon={<DescriptionIcon />}
-            onClick={() => {
-              const fileUrl =
-                component.files && component.files.length > 0 ? component.files[0].s3_url : null;
-              if (fileUrl) {
-                onOpenFile(fileUrl);
-              }
-            }}
-            fullWidth
-            disabled={!component.files || component.files.length === 0}
-          >
-            เปิดไฟล์แบบล่าสุด
-          </Button>
-        </Stack>
-
-        <Box mt={3}>
-          <Typography variant="h6" fontWeight="500" mb={1}>
-            ประวัติการเปลี่ยนแปลงสถานะ
-          </Typography>
-          {statusHistory && statusHistory.length > 0 ? (
-            statusHistory.map((entry, index) => (
-              <Typography key={index} variant="body2" color="textSecondary">
-                {new Date(entry.timestamp).toLocaleDateString('th-TH')}: {statusTranslation[entry.status] || entry.status}
-              </Typography>
-            ))
-          ) : (
-            <Typography variant="body2" color="textSecondary">
-              ไม่มีประวัติการเปลี่ยนแปลงสถานะ
-            </Typography>
-          )}
-        </Box>
-
-        <Dialog
-          open={openRejectDialog}
-          onClose={() => setOpenRejectDialog(false)}
+            <Icon name="circle-check" size={16} />
+            {isAdmin ? `อัพเดทเป็น ${COMPONENT_STATUS[nextStatus]?.th || nextStatus}` : 'ยอมรับชิ้นงาน'}
+          </button>
+        )}
+        <button
+          className="mes-btn mes-btn-danger w-full"
+          onClick={() => setOpenRejectDialog(true)}
+          disabled={component.status === 'rejected' || disableActions}
         >
-          <DialogTitle>ยืนยันการปฏิเสธ</DialogTitle>
-          <DialogContent>
-            <DialogContentText>
-              คุณแน่ใจว่าต้องการปฏิเสธชิ้นงานนี้หรือไม่? การดำเนินการนี้จะเปลี่ยนสถานะเป็น "ปฏิเสธ"
-            </DialogContentText>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenRejectDialog(false)} color="primary">
-              ยกเลิก
-            </Button>
-            <Button onClick={handleRejectConfirm} color="error">
-              ยืนยัน
-            </Button>
-          </DialogActions>
-        </Dialog>
+          <Icon name="circle-x" size={16} /> ปฏิเสธชิ้นงาน
+        </button>
+        <button
+          className="mes-btn mes-btn-ghost w-full"
+          onClick={() => {
+            const fileUrl =
+              component.files && component.files.length > 0 ? component.files[0].s3_url : null;
+            if (fileUrl) {
+              onOpenFile(fileUrl);
+            }
+          }}
+          disabled={!component.files || component.files.length === 0}
+        >
+          <Icon name="file-text" size={16} /> เปิดไฟล์แบบล่าสุด
+        </button>
+      </div>
 
-        <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-          <Alert onClose={handleCloseSnackbar} severity="success">
-            อัพเดทสถานะชิ้นงานเรียบร้อยแล้ว!
-          </Alert>
-        </Snackbar>
-      </CardContent>
-    </BlankCard>
+      <div className="mt-5">
+        <div className="text-sm font-semibold">ประวัติการเปลี่ยนแปลงสถานะ</div>
+        <div className="mt-2">
+          {statusHistory && statusHistory.length > 0 ? (
+            <Timeline
+              items={statusHistory.map((entry, i) => {
+                const m = resolveComponentStatus(entry.status);
+                return {
+                  meta: m,
+                  title: m.th,
+                  sub: new Date(entry.timestamp).toLocaleDateString('th-TH'),
+                  current: i === 0,
+                };
+              })}
+            />
+          ) : (
+            <div className="text-sm text-mes-muted">ไม่มีประวัติการเปลี่ยนแปลงสถานะ</div>
+          )}
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={openRejectDialog}
+        onClose={() => setOpenRejectDialog(false)}
+        onConfirm={handleRejectConfirm}
+        title="ยืนยันการปฏิเสธ"
+        message='คุณแน่ใจว่าต้องการปฏิเสธชิ้นงานนี้หรือไม่? การดำเนินการนี้จะเปลี่ยนสถานะเป็น "ปฏิเสธ"'
+        confirmLabel="ยืนยัน"
+        danger
+      />
+      {toastNode}
+    </div>
   );
 };
 

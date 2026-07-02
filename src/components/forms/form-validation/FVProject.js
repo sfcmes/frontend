@@ -1,10 +1,7 @@
-// FVProject.js
-import React from 'react';
+// [MES] FVProject — project create form (Formik + Yup).
+// Validation schema identical to previous implementation.
 import { useFormik } from 'formik';
 import * as yup from 'yup';
-import { Box, Button, Stack, FormControl, InputLabel, TextField, Select, MenuItem } from '@mui/material';
-import CustomTextField from '../theme-elements/CustomTextField';
-import CustomFormLabel from '../theme-elements/CustomFormLabel';
 
 const validationSchema = yup.object({
   projectName: yup
@@ -25,9 +22,11 @@ const validationSchema = yup.object({
     .required('กรุณาใส่จำนวนชั้นทั้งหมด'),
   status: yup
     .string()
-    .oneOf(["Planning", "In Progress", "Completed", "On Hold"])
+    .oneOf(['Planning', 'In Progress', 'Completed', 'On Hold'])
     .required('กรุณาใส่จำนวนชั้นของโครงการ'),
 });
+
+const FieldError = ({ show, msg }) => (show && msg ? <div className="mt-1 text-xs text-sem-danger">{msg}</div> : null);
 
 const FVProject = ({ onAddProject }) => {
   const formik = useFormik({
@@ -37,7 +36,7 @@ const FVProject = ({ onAddProject }) => {
       section: '',
       status: '',
     },
-    validationSchema: validationSchema,
+    validationSchema,
     onSubmit: (values) => {
       const newProject = {
         name: values.projectName,
@@ -51,74 +50,71 @@ const FVProject = ({ onAddProject }) => {
   });
 
   return (
-    <form onSubmit={formik.handleSubmit}>
-      <Stack>
-        <Box>
-          <CustomFormLabel>ชื่อโครงการ</CustomFormLabel>
-          <TextField
-            fullWidth
-            id="projectName"
-            name="projectName"
-            label="กรอกชื่อโครงการ"
-            value={formik.values.projectName}
-            onChange={formik.handleChange}
-            error={formik.touched.projectName && Boolean(formik.errors.projectName)}
-            helperText={formik.touched.projectName && formik.errors.projectName}
-          />
-        </Box>
-        <Box>
-          <CustomFormLabel>รหัสโครงการ</CustomFormLabel>
-          <TextField
-            fullWidth
-            id="projectCode"
-            name="projectCode"
-            label="กรอกรหัสของโครงการ"
-            value={formik.values.projectCode}
-            onChange={formik.handleChange}
-            error={formik.touched.projectCode && Boolean(formik.errors.projectCode)}
-            helperText={formik.touched.projectCode && formik.errors.projectCode}
-            // placeholder="รหัสของโครงการ"
-          />
-        </Box>
-        <Box>
-          <CustomFormLabel>จำนวนชั้นของโครงการ</CustomFormLabel>
-          <CustomTextField
-            fullWidth
-            id="section"
-            name="section"
-            label="กรอกจำนวนชั้นทั้งหมดของโครงการ"
-            type="number"
-            value={formik.values.section}
-            onChange={formik.handleChange}
-            error={formik.touched.section && Boolean(formik.errors.section)}
-            helperText={formik.touched.section && formik.errors.section}
-            // placeholder="จำนวนชั้นทั้งหมดในโครงการ"
-          />
-        </Box>
-        <Box>
-          <CustomFormLabel>สถานะโครงการ</CustomFormLabel>
-          <FormControl fullWidth>
-            <InputLabel id="status-label">สถานะโครงการ</InputLabel>
-            <Select
-              labelId="status-label"
-              id="status"
-              name="status"
-              value={formik.values.status}
-              onChange={formik.handleChange}
-              error={formik.touched.status && Boolean(formik.errors.status)}
-            >
-              <MenuItem value="">เลือกสถานะโครงการ</MenuItem>
-              <MenuItem value="Planning">Planning</MenuItem>
-              <MenuItem value="In Progress">In Progress</MenuItem>
-              <MenuItem value="Completed">Completed</MenuItem>
-              <MenuItem value="On Hold">On Hold</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-      </Stack>
-      <Button color="primary" variant="contained" type="submit">
-        บันทึกโครงการเข้าระบบ
-      </Button>
+    <form onSubmit={formik.handleSubmit} className="flex flex-col gap-3">
+      <div>
+        <label className="mes-label" htmlFor="projectName">ชื่อโครงการ</label>
+        <input
+          id="projectName"
+          name="projectName"
+          className="mes-input"
+          placeholder="กรอกชื่อโครงการ"
+          value={formik.values.projectName}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+        />
+        <FieldError show={formik.touched.projectName} msg={formik.errors.projectName} />
+      </div>
+      <div>
+        <label className="mes-label" htmlFor="projectCode">รหัสโครงการ</label>
+        <input
+          id="projectCode"
+          name="projectCode"
+          className="mes-input"
+          placeholder="กรอกรหัสของโครงการ"
+          value={formik.values.projectCode}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+        />
+        <FieldError show={formik.touched.projectCode} msg={formik.errors.projectCode} />
+      </div>
+      <div>
+        <label className="mes-label" htmlFor="section">จำนวนชั้นของโครงการ</label>
+        <input
+          id="section"
+          name="section"
+          className="mes-input"
+          type="number"
+          inputMode="numeric"
+          placeholder="กรอกจำนวนชั้นทั้งหมดของโครงการ"
+          value={formik.values.section}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+        />
+        <FieldError show={formik.touched.section} msg={formik.errors.section} />
+      </div>
+      <div>
+        <label className="mes-label" htmlFor="status">สถานะโครงการ</label>
+        <select
+          id="status"
+          name="status"
+          className="mes-input"
+          value={formik.values.status}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+        >
+          <option value="">เลือกสถานะโครงการ</option>
+          <option value="Planning">Planning</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Completed">Completed</option>
+          <option value="On Hold">On Hold</option>
+        </select>
+        <FieldError show={formik.touched.status} msg={formik.errors.status} />
+      </div>
+      <div>
+        <button className="mes-btn mes-btn-primary w-full sm:w-auto" type="submit">
+          บันทึกโครงการเข้าระบบ
+        </button>
+      </div>
     </form>
   );
 };

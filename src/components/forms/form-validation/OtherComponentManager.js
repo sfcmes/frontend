@@ -1,17 +1,15 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { 
-  Grid, Button, TextField, Select, MenuItem, FormControl, InputLabel, 
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
-  Typography, Snackbar, Alert
-} from '@mui/material';
-import { 
-  fetchProjects, 
-  updateOtherComponentDetails, 
+// [MES] OtherComponentManager — edit/delete quantity-tracked "other" components.
+// Data logic identical to previous implementation.
+import { useState, useEffect, useContext } from 'react';
+import {
+  fetchProjects,
+  updateOtherComponentDetails,
   deleteOtherComponentById,
-  fetchOtherComponentsByProjectIdV2
+  fetchOtherComponentsByProjectIdV2,
 } from 'src/utils/api';
 import { AuthContext } from 'src/contexts/AuthContext';
+import { ConfirmDialog, useToast, EmptyState } from 'src/components/mes/ui';
+import { StatusBadge } from 'src/components/mes/StatusBadge';
 
 const OtherComponentManager = () => {
   const { user } = useContext(AuthContext);
@@ -22,31 +20,22 @@ const OtherComponentManager = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editedComponent, setEditedComponent] = useState({});
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+  const { showToast, toastNode } = useToast();
 
   useEffect(() => {
-    fetchProjects().then(response => setProjects(response.data));
+    fetchProjects().then((response) => setProjects(response.data));
   }, []);
 
   const handleProjectChange = async (projectId) => {
     setSelectedProject(projectId);
+    setSelectedComponent(null);
     try {
       const projectComponents = await fetchOtherComponentsByProjectIdV2(projectId);
       setComponents(projectComponents);
-    } catch (error) {
-      console.error('Error fetching other components:', error);
+    } catch {
       setComponents([]);
-      setSnackbar({ open: true, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลชิ้นส่วน', severity: 'error' });
+      showToast('เกิดข้อผิดพลาดในการดึงข้อมูลชิ้นส่วน', 'error');
     }
-  };
-
-  const handleComponentSelect = (component) => {
-    setSelectedComponent(component);
-    setEditedComponent({ ...component });
-  };
-
-  const handleEditComponent = () => {
-    setIsEditing(true);
   };
 
   const handleUpdateComponent = async () => {
@@ -54,174 +43,136 @@ const OtherComponentManager = () => {
       if (!user || !user.id) {
         throw new Error('ไม่พบข้อมูลผู้ใช้');
       }
-  
       const updatedComponent = await updateOtherComponentDetails(editedComponent.id, {
         ...editedComponent,
         updated_by: user.id,
-        resetStatuses: editedComponent.total_quantity !== selectedComponent.total_quantity
+        resetStatuses: editedComponent.total_quantity !== selectedComponent.total_quantity,
       });
-  
-      const updatedComponents = components.map(c => 
-        c.id === updatedComponent.id ? updatedComponent : c
-      );
-      setComponents(updatedComponents);
+      setComponents(components.map((c) => (c.id === updatedComponent.id ? updatedComponent : c)));
       setSelectedComponent(updatedComponent);
       setIsEditing(false);
-      setSnackbar({ open: true, message: 'อัปเดตชิ้นส่วนสำเร็จ', severity: 'success' });
-    } catch (error) {
-      console.error('เกิดข้อผิดพลาดในการอัปเดตชิ้นส่วน:', error);
-      setSnackbar({ open: true, message: 'เกิดข้อผิดพลาดในการอัปเดตชิ้นส่วน', severity: 'error' });
+      showToast('อัปเดตชิ้นส่วนสำเร็จ');
+    } catch {
+      showToast('เกิดข้อผิดพลาดในการอัปเดตชิ้นส่วน', 'error');
     }
-  };
-
-  const handleDeleteComponent = () => {
-    setIsDeleting(true);
   };
 
   const confirmDelete = async () => {
     try {
       await deleteOtherComponentById(selectedComponent.id);
-      setComponents(components.filter(c => c.id !== selectedComponent.id));
+      setComponents(components.filter((c) => c.id !== selectedComponent.id));
       setSelectedComponent(null);
       setIsDeleting(false);
-      setSnackbar({ open: true, message: 'ลบชิ้นส่วนสำเร็จ', severity: 'success' });
-    } catch (error) {
-      console.error('เกิดข้อผิดพลาดในการลบชิ้นส่วน:', error);
-      setSnackbar({ open: true, message: 'เกิดข้อผิดพลาดในการลบชิ้นส่วน', severity: 'error' });
+      showToast('ลบชิ้นส่วนสำเร็จ');
+    } catch {
+      setIsDeleting(false);
+      showToast('เกิดข้อผิดพลาดในการลบชิ้นส่วน', 'error');
     }
   };
 
-  const handleCloseSnackbar = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-    setSnackbar({ ...snackbar, open: false });
-  };
+  const editField = (name, label, parse = (v) => v) => (
+    <div>
+      <label className="mes-label" htmlFor={`ocm-${name}`}>{label}</label>
+      <input
+        id={`ocm-${name}`}
+        className="mes-input"
+        type={name === 'name' ? 'text' : 'number'}
+        value={editedComponent[name] ?? ''}
+        onChange={(e) => setEditedComponent({ ...editedComponent, [name]: parse(e.target.value) })}
+      />
+    </div>
+  );
 
   return (
-    <Grid container spacing={3}>
-      <Grid item xs={12}>
-        <FormControl fullWidth>
-          <InputLabel>เลือกโครงการ</InputLabel>
-          <Select value={selectedProject} onChange={(e) => handleProjectChange(e.target.value)}>
-            {projects.map((project) => (
-              <MenuItem key={project.id} value={project.id}>{project.name}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Grid>
-      <Grid item xs={12}>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>ชื่อ</TableCell>
-                <TableCell>จำนวนทั้งหมด</TableCell>
-                <TableCell>การดำเนินการ</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {components.map((component) => (
-                <TableRow key={component.id}>
-                  <TableCell>{component.name}</TableCell>
-                  <TableCell>{component.total_quantity}</TableCell>
-                  <TableCell>
-                    <Button onClick={() => handleComponentSelect(component)}>เลือก</Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Grid>
-      {selectedComponent && (
-        <Grid item xs={12}>
-          <Paper style={{ padding: '20px' }}>
-            <Typography variant="h6" gutterBottom>
-              ชิ้นส่วนที่เลือก: {selectedComponent.name}
-            </Typography>
-            {isEditing ? (
-              <>
-                <TextField
-                  label="ชื่อ"
-                  value={editedComponent.name}
-                  onChange={(e) => setEditedComponent({ ...editedComponent, name: e.target.value })}
-                  fullWidth
-                  margin="normal"
-                />
-                <TextField
-                  label="จำนวนทั้งหมด"
-                  type="number"
-                  value={editedComponent.total_quantity}
-                  onChange={(e) => setEditedComponent({ ...editedComponent, total_quantity: parseInt(e.target.value, 10) })}
-                  fullWidth
-                  margin="normal"
-                />
-                <TextField
-                  label="ความกว้าง"
-                  type="number"
-                  value={editedComponent.width}
-                  onChange={(e) => setEditedComponent({ ...editedComponent, width: parseFloat(e.target.value) })}
-                  fullWidth
-                  margin="normal"
-                />
-                <TextField
-                  label="ความสูง"
-                  type="number"
-                  value={editedComponent.height}
-                  onChange={(e) => setEditedComponent({ ...editedComponent, height: parseFloat(e.target.value) })}
-                  fullWidth
-                  margin="normal"
-                />
-                <TextField
-                  label="ความหนา"
-                  type="number"
-                  value={editedComponent.thickness}
-                  onChange={(e) => setEditedComponent({ ...editedComponent, thickness: parseFloat(e.target.value) })}
-                  fullWidth
-                  margin="normal"
-                />
-                <Button onClick={handleUpdateComponent}>บันทึกการเปลี่ยนแปลง</Button>
-                <Button onClick={() => setIsEditing(false)}>ยกเลิก</Button>
-              </>
-            ) : (
-              <>
-                <Typography>จำนวนทั้งหมด: {selectedComponent.total_quantity}</Typography>
-                <Typography>ความกว้าง: {selectedComponent.width}</Typography>
-                <Typography>ความสูง: {selectedComponent.height}</Typography>
-                <Typography>ความหนา: {selectedComponent.thickness}</Typography>
-                <Typography variant="h6" gutterBottom>สถานะ:</Typography>
-                {Object.entries(selectedComponent.statuses).map(([status, quantity]) => (
-                  <Typography key={status}>{status}: {quantity}</Typography>
-                ))}
-                <Button onClick={handleEditComponent}>แก้ไข</Button>
-                <Button onClick={handleDeleteComponent}>ลบ</Button>
-              </>
-            )}
-          </Paper>
-        </Grid>
+    <div className="flex flex-col gap-4">
+      <div>
+        <label className="mes-label" htmlFor="ocm-project">เลือกโครงการ</label>
+        <select
+          id="ocm-project"
+          className="mes-input sm:max-w-md"
+          value={selectedProject}
+          onChange={(e) => handleProjectChange(e.target.value)}
+        >
+          <option value="">—</option>
+          {projects.map((project) => (
+            <option key={project.id} value={project.id}>{project.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {components.length === 0 ? (
+        selectedProject && <EmptyState icon="box" title="ไม่พบชิ้นงานในโครงการนี้" />
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {components.map((component) => (
+            <button
+              key={component.id}
+              onClick={() => { setSelectedComponent(component); setEditedComponent({ ...component }); setIsEditing(false); }}
+              className={`flex min-h-touch items-center gap-3 rounded-sm border px-3 py-2 text-left ${
+                selectedComponent?.id === component.id ? 'border-mes-accent bg-mes-surface-2' : 'border-mes-border hover:bg-mes-surface-2'
+              }`}
+            >
+              <span className="min-w-0 grow truncate text-sm font-medium">{component.name}</span>
+              <span className="shrink-0 text-xs text-mes-muted tabular-nums">จำนวนทั้งหมด {component.total_quantity}</span>
+            </button>
+          ))}
+        </div>
       )}
-      <Dialog
+
+      {selectedComponent && (
+        <div className="rounded-md border border-mes-border p-4">
+          <div className="text-sm font-semibold">ชิ้นส่วนที่เลือก: {selectedComponent.name}</div>
+          {isEditing ? (
+            <div className="mt-3 flex flex-col gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {editField('name', 'ชื่อ')}
+                {editField('total_quantity', 'จำนวนทั้งหมด', (v) => parseInt(v, 10))}
+                {editField('width', 'ความกว้าง', (v) => parseFloat(v))}
+                {editField('height', 'ความสูง', (v) => parseFloat(v))}
+                {editField('thickness', 'ความหนา', (v) => parseFloat(v))}
+              </div>
+              <div className="flex gap-2">
+                <button className="mes-btn mes-btn-primary" onClick={handleUpdateComponent}>บันทึกการเปลี่ยนแปลง</button>
+                <button className="mes-btn mes-btn-ghost" onClick={() => setIsEditing(false)}>ยกเลิก</button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-2">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
+                <div><span className="text-mes-muted">จำนวนทั้งหมด:</span> <b className="tabular-nums">{selectedComponent.total_quantity}</b></div>
+                <div><span className="text-mes-muted">ความกว้าง:</span> <b className="tabular-nums">{selectedComponent.width}</b></div>
+                <div><span className="text-mes-muted">ความสูง:</span> <b className="tabular-nums">{selectedComponent.height}</b></div>
+                <div><span className="text-mes-muted">ความหนา:</span> <b className="tabular-nums">{selectedComponent.thickness}</b></div>
+              </div>
+              <div className="mt-2 text-xs font-semibold text-mes-muted">สถานะ:</div>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {Object.entries(selectedComponent.statuses || {}).map(([status, quantity]) => (
+                  <span key={status} className="inline-flex items-center gap-1.5">
+                    <StatusBadge status={status} size="sm" />
+                    <span className="text-sm tabular-nums">{quantity}</span>
+                  </span>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button className="mes-btn mes-btn-ghost" onClick={() => setIsEditing(true)}>แก้ไข</button>
+                <button className="mes-btn mes-btn-danger" onClick={() => setIsDeleting(true)}>ลบ</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <ConfirmDialog
         open={isDeleting}
         onClose={() => setIsDeleting(false)}
-      >
-        <DialogTitle>ยืนยันการลบ</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            คุณแน่ใจหรือไม่ว่าต้องการลบชิ้นส่วนนี้? การดำเนินการนี้ไม่สามารถยกเลิกได้
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsDeleting(false)}>ยกเลิก</Button>
-          <Button onClick={confirmDelete} color="error">ลบ</Button>
-        </DialogActions>
-      </Dialog>
-      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Grid>
+        onConfirm={confirmDelete}
+        title="ยืนยันการลบ"
+        message="คุณแน่ใจหรือไม่ว่าต้องการลบชิ้นส่วนนี้? การดำเนินการนี้ไม่สามารถยกเลิกได้"
+        confirmLabel="ลบ"
+        danger
+      />
+      {toastNode}
+    </div>
   );
 };
 

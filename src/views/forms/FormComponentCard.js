@@ -1,27 +1,18 @@
-import React, { useState, useEffect } from 'react';
+// [MES] FormComponentCard — public QR-landing page: verify username, then act on
+// the component (accept / reject / open drawing). Data logic identical to previous
+// implementation.
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import {
-  Box,
-  Typography,
-  CircularProgress,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  useMediaQuery,
-  useTheme,
-  TextField,
-} from '@mui/material';
 import {
   fetchComponentByQR,
   updateComponentStatus,
   fetchComponentFiles,
   openFile,
-  publicApi,
   checkUsernameAndRole,
 } from 'src/utils/api';
 import ComponentCard from './ComponentCard';
+import { Icon } from 'src/components/mes/Icon';
+import { ConfirmDialog, Spinner } from 'src/components/mes/ui';
 
 const FormComponentCard = () => {
   const { id } = useParams();
@@ -33,26 +24,23 @@ const FormComponentCard = () => {
   const [usernameError, setUsernameError] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isUserVerified, setIsUserVerified] = useState(false);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const fetchComponentData = async () => {
+  const fetchComponentData = useCallback(async () => {
     try {
       setLoading(true);
       const componentData = await fetchComponentByQR(id);
       const filesData = await fetchComponentFiles(id);
       setComponent({ ...componentData, files: filesData });
-    } catch (err) {
+    } catch {
       setError('ไม่สามารถโหลดข้อมูลชิ้นงานได้');
-      console.error(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchComponentData();
-  }, [id]);
+  }, [fetchComponentData]);
 
   const handleVerifyUser = async () => {
     if (!username) {
@@ -69,9 +57,8 @@ const FormComponentCard = () => {
         setUsernameError('ชื่อผู้ใช้งานไม่ถูกต้อง');
         setIsUserVerified(false);
       }
-    } catch (err) {
+    } catch {
       setError('ไม่สามารถตรวจสอบชื่อผู้ใช้งานได้');
-      console.error(err);
       setIsUserVerified(false);
     }
   };
@@ -88,89 +75,94 @@ const FormComponentCard = () => {
     try {
       await updateComponentStatus(id, newStatus, username);
       await fetchComponentData();
-    } catch (err) {
+    } catch {
       setError('ไม่สามารถอัพเดทสถานะชิ้นงานได้');
-      console.error(err);
     }
   };
 
   const handleFileOpen = async (fileUrl) => {
     try {
       await openFile(fileUrl);
-    } catch (err) {
+    } catch {
       setError('ไม่สามารถเปิดไฟล์ได้');
-      console.error(err);
     }
   };
 
-  if (loading) return <CircularProgress />;
-  if (error) return <Typography color="error">{error}</Typography>;
-  if (!component) return <Typography>ไม่พบข้อมูลชิ้นงาน</Typography>;
+  if (loading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-mes-bg">
+        <Spinner />
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-mes-bg p-4 text-center">
+        <span className="text-sem-danger"><Icon name="alert-triangle" size={28} /></span>
+        <div className="text-sm">{error}</div>
+      </div>
+    );
+  }
+  if (!component) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-mes-bg p-4 text-sm text-mes-muted">
+        ไม่พบข้อมูลชิ้นงาน
+      </div>
+    );
+  }
 
   return (
-    <Box sx={{ padding: isMobile ? 2 : 4 }}>
-      <Box display="flex" alignItems="center" mb={2}>
-        <TextField
-          label="ชื่อผู้ใช้งาน"
-          variant="outlined"
-          value={username}
-          onChange={(e) => {
-            setUsername(e.target.value);
-            setUsernameError('');
-            setIsUserVerified(false);
-          }}
-          error={!!usernameError}
-          helperText={usernameError}
-          fullWidth
-          sx={{ mr: 2 }}
-        />
-        <Button
-          variant="contained"
-          onClick={handleVerifyUser}
-          disabled={!username}
-        >
-          ตกลง
-        </Button>
-      </Box>
-      {isUserVerified && (
-        <Typography color="success.main" mb={2}>
-          ยืนยันตัวตนสำเร็จ {isAdmin ? '(Admin)' : '(ผู้ใช้ทั่วไป)'}
-        </Typography>
-      )}
-      <ComponentCard
-        component={component}
-        onStatusChange={(newStatus) => handleStatusChange(newStatus)}
-        onOpenFile={handleFileOpen}
-        disableActions={!isUserVerified}
-        isAdmin={isAdmin}
-      />
+    <div className="min-h-dvh bg-mes-bg px-3 py-4 md:px-6">
+      <div className="mx-auto w-full max-w-xl">
+        <div className="mes-card p-4">
+          <label className="mes-label" htmlFor="fcc-username">ชื่อผู้ใช้งาน</label>
+          <div className="flex gap-2">
+            <input
+              id="fcc-username"
+              className="mes-input"
+              value={username}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                setUsernameError('');
+                setIsUserVerified(false);
+              }}
+            />
+            <button className="mes-btn mes-btn-primary shrink-0" onClick={handleVerifyUser} disabled={!username}>
+              ตกลง
+            </button>
+          </div>
+          {usernameError && <div className="mt-1 text-xs text-sem-danger">{usernameError}</div>}
+          {isUserVerified && (
+            <div className="mt-2 flex items-center gap-1.5 text-sm text-sem-success">
+              <Icon name="circle-check" size={15} />
+              ยืนยันตัวตนสำเร็จ {isAdmin ? '(Admin)' : '(ผู้ใช้ทั่วไป)'}
+            </div>
+          )}
+        </div>
 
-      <Dialog
+        <div className="mt-3">
+          <ComponentCard
+            component={component}
+            onStatusChange={(newStatus) => handleStatusChange(newStatus)}
+            onOpenFile={handleFileOpen}
+            disableActions={!isUserVerified}
+            isAdmin={isAdmin}
+          />
+        </div>
+      </div>
+
+      <ConfirmDialog
         open={confirmDialog.open}
         onClose={() => setConfirmDialog({ open: false, action: null })}
-      >
-        <DialogTitle>ยืนยันการเปลี่ยนสถานะ</DialogTitle>
-        <DialogContent>
-          <Typography>คุณแน่ใจว่าต้องการเปลี่ยนสถานะของชิ้นงานนี้หรือไม่?</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDialog({ open: false, action: null })} color="primary">
-            ยกเลิก
-          </Button>
-          <Button
-            onClick={() => {
-              if (confirmDialog.action) {
-                confirmDialog.action();
-              }
-              setConfirmDialog({ open: false, action: null });
-            }}
-            color="error"
-          >
-            ยืนยัน
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        onConfirm={() => {
+          if (confirmDialog.action) confirmDialog.action();
+          setConfirmDialog({ open: false, action: null });
+        }}
+        title="ยืนยันการเปลี่ยนสถานะ"
+        message="คุณแน่ใจว่าต้องการเปลี่ยนสถานะของชิ้นงานนี้หรือไม่?"
+        confirmLabel="ยืนยัน"
+      />
+    </div>
   );
 };
 

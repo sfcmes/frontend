@@ -1,18 +1,7 @@
-import React, { useState, useEffect } from 'react';
+// [MES] OtherComponentForm — create a quantity-tracked "other" component.
+import { useState, useEffect } from 'react';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
-import {
-  Box,
-  Button,
-  Stack,
-  FormControl,
-  InputLabel,
-  Typography,
-  CircularProgress,
-  Select,
-  MenuItem,
-} from '@mui/material';
-import CustomTextField from '../theme-elements/CustomTextField';
 import { createOtherComponent } from 'src/utils/api';
 
 const validationSchema = yup.object({
@@ -23,6 +12,8 @@ const validationSchema = yup.object({
   thickness: yup.number().positive('ความหนาต้องเป็นตัวเลขบวก').required('กรุณาใส่ความหนาของชิ้นงาน'),
   total_quantity: yup.number().positive('จำนวนต้องเป็นตัวเลขบวก').required('กรุณาใส่จำนวนของชิ้นงาน'),
 });
+
+const FieldError = ({ show, msg }) => (show && msg ? <div className="mt-1 text-xs text-sem-danger">{msg}</div> : null);
 
 const OtherComponentForm = ({ projects, onProjectChange, onComponentAdded }) => {
   const [error, setError] = useState('');
@@ -49,7 +40,7 @@ const OtherComponentForm = ({ projects, onProjectChange, onComponentAdded }) => 
       thickness: '',
       total_quantity: '',
     },
-    validationSchema: validationSchema,
+    validationSchema,
     onSubmit: async (values) => {
       setError('');
       setSuccess('');
@@ -57,10 +48,9 @@ const OtherComponentForm = ({ projects, onProjectChange, onComponentAdded }) => 
       try {
         const response = await createOtherComponent(values);
         setSuccess('ชิ้นงานอื่นๆ ถูกสร้างเรียบร้อยแล้ว');
-        onComponentAdded(response); // Notify parent component about the new component
-        formik.resetForm(); // Reset the form after successful submission
-      } catch (error) {
-        console.error('Error creating component:', error);
+        onComponentAdded(response);
+        formik.resetForm();
+      } catch {
         setError('เกิดข้อผิดพลาดที่ไม่คาดคิด โปรดลองอีกครั้ง');
       } finally {
         setIsSubmitting(false);
@@ -68,100 +58,73 @@ const OtherComponentForm = ({ projects, onProjectChange, onComponentAdded }) => 
     },
   });
 
-  return (
-    <form onSubmit={formik.handleSubmit}>
-      <Stack spacing={3}>
-        {error && <Typography color="error">{error}</Typography>}
-        {success && <Typography color="success.main">{success}</Typography>}
-        <FormControl fullWidth>
-          <InputLabel id="project-id-label">โครงการ</InputLabel>
-          <Select
-            labelId="project-id-label"
-            id="project_id"
-            name="project_id"
-            value={formik.values.project_id}
-            onChange={(event) => {
-              formik.setFieldValue('project_id', event.target.value);
-              onProjectChange(event);
-            }}
-            error={formik.touched.project_id && Boolean(formik.errors.project_id)}
-          >
-            {projects.map((project) => (
-              <MenuItem key={project.id} value={project.id}>
-                {project.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+  const numField = (name, label) => (
+    <div>
+      <label className="mes-label" htmlFor={`ocf-${name}`}>{label}</label>
+      <input
+        id={`ocf-${name}`}
+        name={name}
+        className="mes-input"
+        type="number"
+        inputMode="decimal"
+        value={formik.values[name]}
+        onChange={formik.handleChange}
+        onBlur={formik.handleBlur}
+      />
+      <FieldError show={formik.touched[name]} msg={formik.errors[name]} />
+    </div>
+  );
 
-        <CustomTextField
-          fullWidth
-          id="name"
+  return (
+    <form onSubmit={formik.handleSubmit} className="flex flex-col gap-3">
+      {error && <div className="rounded-sm border border-sem-danger px-3 py-2 text-sm text-sem-danger">{error}</div>}
+      {success && <div className="rounded-sm border border-sem-success px-3 py-2 text-sm text-sem-success">{success}</div>}
+
+      <div>
+        <label className="mes-label" htmlFor="ocf-project">โครงการ</label>
+        <select
+          id="ocf-project"
+          name="project_id"
+          className="mes-input"
+          value={formik.values.project_id}
+          onChange={(event) => {
+            formik.setFieldValue('project_id', event.target.value);
+            onProjectChange(event);
+          }}
+        >
+          <option value="">—</option>
+          {projects.map((project) => (
+            <option key={project.id} value={project.id}>{project.name}</option>
+          ))}
+        </select>
+        <FieldError show={formik.touched.project_id} msg={formik.errors.project_id} />
+      </div>
+
+      <div>
+        <label className="mes-label" htmlFor="ocf-name">ชื่อชิ้นงาน</label>
+        <input
+          id="ocf-name"
           name="name"
-          label="ชื่อชิ้นงาน"
+          className="mes-input"
           value={formik.values.name}
           onChange={formik.handleChange}
-          error={formik.touched.name && Boolean(formik.errors.name)}
-          helperText={formik.touched.name && formik.errors.name}
+          onBlur={formik.handleBlur}
         />
+        <FieldError show={formik.touched.name} msg={formik.errors.name} />
+      </div>
 
-        <CustomTextField
-          fullWidth
-          id="width"
-          name="width"
-          label="ความกว้าง (มม.)"
-          type="number"
-          value={formik.values.width}
-          onChange={formik.handleChange}
-          error={formik.touched.width && Boolean(formik.errors.width)}
-          helperText={formik.touched.width && formik.errors.width}
-        />
-        <CustomTextField
-          fullWidth
-          id="height"
-          name="height"
-          label="ความสูง (มม.)"
-          type="number"
-          value={formik.values.height}
-          onChange={formik.handleChange}
-          error={formik.touched.height && Boolean(formik.errors.height)}
-          helperText={formik.touched.height && formik.errors.height}
-        />
-        <CustomTextField
-          fullWidth
-          id="thickness"
-          name="thickness"
-          label="ความหนา (มม.)"
-          type="number"
-          value={formik.values.thickness}
-          onChange={formik.handleChange}
-          error={formik.touched.thickness && Boolean(formik.errors.thickness)}
-          helperText={formik.touched.thickness && formik.errors.thickness}
-        />
-        <CustomTextField
-          fullWidth
-          id="total_quantity"
-          name="total_quantity"
-          label="จำนวน"
-          type="number"
-          value={formik.values.total_quantity}
-          onChange={formik.handleChange}
-          error={formik.touched.total_quantity && Boolean(formik.errors.total_quantity)}
-          helperText={formik.touched.total_quantity && formik.errors.total_quantity}
-        />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {numField('width', 'ความกว้าง (มม.)')}
+        {numField('height', 'ความสูง (มม.)')}
+        {numField('thickness', 'ความหนา (มม.)')}
+        {numField('total_quantity', 'จำนวน')}
+      </div>
 
-        <Box mt={3}>
-          <Button
-            color="primary"
-            variant="contained"
-            type="submit"
-            disabled={isSubmitting}
-            startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
-          >
-            บันทึก
-          </Button>
-        </Box>
-      </Stack>
+      <div>
+        <button className="mes-btn mes-btn-primary w-full sm:w-auto" type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'กำลังบันทึก…' : 'บันทึก'}
+        </button>
+      </div>
     </form>
   );
 };

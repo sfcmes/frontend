@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Tabs, Tab, Box, Typography } from '@mui/material';
+// [MES] FVComponent — single-component entry: precast / other sub-tabs.
+import { useState, useEffect } from 'react';
 import PrecastComponentForm from './PrecastComponentForm';
 import OtherComponentForm from './OtherComponentForm';
 import { fetchProjects, fetchSectionsByProjectId } from 'src/utils/api';
@@ -10,42 +10,37 @@ const FVComponent = () => {
   const [sections, setSections] = useState([]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const projectResponse = await fetchProjects();
-        setProjects(projectResponse.data);
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-      }
-    };
-    fetchData();
+    fetchProjects()
+      .then((res) => setProjects(res.data))
+      .catch(() => setProjects([]));
   }, []);
-
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-  };
 
   const handleProjectChange = async (event) => {
     const projectId = event.target.value;
     try {
       const sectionResponse = await fetchSectionsByProjectId(projectId);
       setSections(sectionResponse.data);
-    } catch (error) {
-      console.error('Error fetching sections:', error);
+    } catch {
+      setSections([]);
     }
   };
 
-  const handleComponentAdded = (newComponent) => {
-    // Do something with the new component, e.g., update state or show a notification
-  };
-
   return (
-    <Box>
-      <Tabs value={tabValue} onChange={handleTabChange}>
-        <Tab label="ชิ้นงานพรีคาสท์" />
-        <Tab label="ชิ้นงานอื่นๆ" />
-      </Tabs>
-      <Box mt={3}>
+    <div>
+      <div className="flex gap-1 border-b border-mes-border">
+        {['ชิ้นงานพรีคาสท์', 'ชิ้นงานอื่นๆ'].map((label, i) => (
+          <button
+            key={label}
+            onClick={() => setTabValue(i)}
+            className={`min-h-touch md:min-h-0 px-3 py-2 text-sm font-semibold border-b-2 -mb-px ${
+              tabValue === i ? 'border-mes-accent text-mes-accent' : 'border-transparent text-mes-muted hover:text-mes-text'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-4">
         {tabValue === 0 && (
           <PrecastComponentForm
             projects={projects}
@@ -58,11 +53,11 @@ const FVComponent = () => {
             projects={projects}
             sections={sections}
             onProjectChange={handleProjectChange}
-            onComponentAdded={handleComponentAdded} // Add this line
+            onComponentAdded={() => {}}
           />
         )}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 };
 

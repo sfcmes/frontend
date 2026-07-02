@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+// [MES] FVSection — section create form (Formik + Yup).
+// Validation schema identical to previous implementation.
+import { useState, useEffect } from 'react';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
-import { Box, Button, Stack, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
-import CustomTextField from '../theme-elements/CustomTextField';
-import CustomFormLabel from '../theme-elements/CustomFormLabel';
 import { fetchProjects } from 'src/utils/api';
+import { SEM_STATUS } from 'src/components/mes/status-meta';
 
 const validationSchema = yup.object({
   projectSelection: yup
@@ -23,23 +23,19 @@ const validationSchema = yup.object({
     .required('กรุณาใส่จำนวน Component'),
   status: yup
     .string()
-    .oneOf(["planning", "in_progress", "completed", "on_hold"])
+    .oneOf(['planning', 'in_progress', 'completed', 'on_hold'])
     .required('กรุณาเลือกสถานะของ Section'),
 });
+
+const FieldError = ({ show, msg }) => (show && msg ? <div className="mt-1 text-xs text-sem-danger">{msg}</div> : null);
 
 const FVSection = ({ onAddSection }) => {
   const [projects, setProjects] = useState([]);
 
   useEffect(() => {
-    const loadProjects = async () => {
-      try {
-        const response = await fetchProjects();
-        setProjects(response.data);
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-      }
-    };
-    loadProjects();
+    fetchProjects()
+      .then((response) => setProjects(response.data))
+      .catch(() => setProjects([]));
   }, []);
 
   const formik = useFormik({
@@ -49,9 +45,9 @@ const FVSection = ({ onAddSection }) => {
       components: '',
       status: '',
     },
-    validationSchema: validationSchema,
+    validationSchema,
     onSubmit: (values) => {
-      const selectedProject = projects.find(p => `${p.project_code}-${p.id}` === values.projectSelection);
+      const selectedProject = projects.find((p) => `${p.project_code}-${p.id}` === values.projectSelection);
       const newSection = {
         project_id: selectedProject.id,
         name: values.sectionName,
@@ -64,81 +60,75 @@ const FVSection = ({ onAddSection }) => {
   });
 
   return (
-    <form onSubmit={formik.handleSubmit}>
-      <Stack>
-        <Box>
-          <CustomFormLabel>รหัสโครงการ</CustomFormLabel>
-          <FormControl fullWidth>
-            <InputLabel id="projectSelection-label">เลือกรหัสโครงการ</InputLabel>
-            <Select
-              labelId="projectSelection-label"
-              id="projectSelection"
-              name="projectSelection"
-              value={formik.values.projectSelection}
-              onChange={formik.handleChange}
-              error={formik.touched.projectSelection && Boolean(formik.errors.projectSelection)}
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {projects.map((project) => (
-                <MenuItem key={project.id} value={`${project.project_code}-${project.id}`}>
-                  {project.project_code} - {project.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-        <Box>
-          <CustomFormLabel>ชื่อชั้นในโครงการ</CustomFormLabel>
-          <CustomTextField
-            fullWidth
-            id="sectionName"
-            name="sectionName"
-            value={formik.values.sectionName}
-            onChange={formik.handleChange}
-            error={formik.touched.sectionName && Boolean(formik.errors.sectionName)}
-            helperText={formik.touched.sectionName && formik.errors.sectionName}
-          />
-        </Box>
-        <Box>
-          <CustomFormLabel>จำนวนชิ้นงาน</CustomFormLabel>
-          <CustomTextField
-            fullWidth
-            id="components"
-            name="components"
-            type="number"
-            value={formik.values.components}
-            onChange={formik.handleChange}
-            error={formik.touched.components && Boolean(formik.errors.components)}
-            helperText={formik.touched.components && formik.errors.components}
-            placeholder="10"
-          />
-        </Box>
-        <Box>
-          <CustomFormLabel>สถานะของชั้นในโครงการ</CustomFormLabel>
-          <FormControl fullWidth>
-            <InputLabel id="status-label">เลือกสถานะของชั้นในโครงการ</InputLabel>
-            <Select
-              labelId="status-label"
-              id="status"
-              name="status"
-              value={formik.values.status}
-              onChange={formik.handleChange}
-              error={formik.touched.status && Boolean(formik.errors.status)}
-            >
-              <MenuItem value="">เลือกสถานะของ Section</MenuItem>
-              <MenuItem value="planning">แผนผลิต</MenuItem>
-              <MenuItem value="in_progress">ผลิต</MenuItem>
-              <MenuItem value="completed">เสร็จแล้ว</MenuItem>
-              <MenuItem value="on_hold">On Hold</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-      </Stack>
-      <Button color="primary" variant="contained" type="submit">
-        บันทึก Section เข้าระบบ
-      </Button>
+    <form onSubmit={formik.handleSubmit} className="flex flex-col gap-3">
+      <div>
+        <label className="mes-label" htmlFor="projectSelection">รหัสโครงการ</label>
+        <select
+          id="projectSelection"
+          name="projectSelection"
+          className="mes-input"
+          value={formik.values.projectSelection}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+        >
+          <option value="">เลือกรหัสโครงการ</option>
+          {projects.map((project) => (
+            <option key={project.id} value={`${project.project_code}-${project.id}`}>
+              {project.project_code} - {project.name}
+            </option>
+          ))}
+        </select>
+        <FieldError show={formik.touched.projectSelection} msg={formik.errors.projectSelection} />
+      </div>
+      <div>
+        <label className="mes-label" htmlFor="sectionName">ชื่อชั้นในโครงการ</label>
+        <input
+          id="sectionName"
+          name="sectionName"
+          className="mes-input"
+          value={formik.values.sectionName}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+        />
+        <FieldError show={formik.touched.sectionName} msg={formik.errors.sectionName} />
+      </div>
+      <div>
+        <label className="mes-label" htmlFor="components">จำนวนชิ้นงาน</label>
+        <input
+          id="components"
+          name="components"
+          className="mes-input"
+          type="number"
+          inputMode="numeric"
+          placeholder="10"
+          value={formik.values.components}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+        />
+        <FieldError show={formik.touched.components} msg={formik.errors.components} />
+      </div>
+      <div>
+        <label className="mes-label" htmlFor="status">สถานะของชั้นในโครงการ</label>
+        <select
+          id="status"
+          name="status"
+          className="mes-input"
+          value={formik.values.status}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+        >
+          <option value="">เลือกสถานะของ Section</option>
+          {['planning', 'in_progress', 'completed', 'on_hold'].map((s) => (
+            <option key={s} value={s}>{SEM_STATUS[s].th}</option>
+          ))}
+        </select>
+        <FieldError show={formik.touched.status} msg={formik.errors.status} />
+      </div>
+      <div>
+        <button className="mes-btn mes-btn-primary w-full sm:w-auto" type="submit">
+          บันทึก Section เข้าระบบ
+        </button>
+      </div>
     </form>
   );
 };

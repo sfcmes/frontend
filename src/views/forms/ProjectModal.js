@@ -1,94 +1,80 @@
-import React, { useState, useEffect } from 'react';
-import {
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    TextField,
-    Button,
-    Select,
-    MenuItem,
-    FormControl,
-    InputLabel,
-} from '@mui/material';
+// [MES] ProjectModal — view/edit a project (name, code; status read-only).
+// Previous version was English-only; rebuilt Thai-first.
+import { useState, useEffect } from 'react';
+import { Modal } from 'src/components/mes/ui';
+import { StatusBadge } from 'src/components/mes/StatusBadge';
 
 const ProjectModal = ({ open, project, onClose, onSave, isEditing }) => {
-    const [formData, setFormData] = useState({
-        name: '',
-        project_code: '',
-        status: '',
-    });
+  const [formData, setFormData] = useState({
+    name: '',
+    project_code: '',
+    status: '',
+  });
 
-    useEffect(() => {
-        if (project) {
-            setFormData({
-                name: project.name,
-                project_code: project.project_code,
-                status: project.status,
-            });
-        }
-    }, [project]);
+  useEffect(() => {
+    if (project) {
+      setFormData({
+        name: project.name,
+        project_code: project.project_code,
+        status: project.status,
+      });
+    }
+  }, [project]);
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prevData) => ({
-            ...prevData,
-            [name]: value,
-        }));
-    };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-    const handleSave = async () => {
-        await onSave({ ...project, ...formData });
-        onClose(); // Close the modal after saving
-    };
+  const handleSave = async () => {
+    await onSave({ ...project, ...formData });
+    onClose();
+  };
 
-    return (
-        <Dialog open={open} onClose={onClose}>
-            <DialogTitle>{isEditing ? 'Edit Project' : 'View Project'}</DialogTitle>
-            <DialogContent>
-                <TextField
-                    autoFocus
-                    margin="dense"
-                    name="name"
-                    label="Project Name"
-                    type="text"
-                    fullWidth
-                    value={formData.name}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                />
-                <TextField
-                    margin="dense"
-                    name="project_code"
-                    label="Project Code"
-                    type="text"
-                    fullWidth
-                    value={formData.project_code}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                />
-                <TextField
-                    margin="dense"
-                    name="status"
-                    label="Status"
-                    type="text"
-                    fullWidth
-                    value={formData.status}
-                    disabled
-                />
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose} color="primary">
-                    Exit
-                </Button>
-                {isEditing && (
-                    <Button onClick={handleSave} color="primary">
-                        Save
-                    </Button>
-                )}
-            </DialogActions>
-        </Dialog>
-    );
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEditing ? 'แก้ไขโครงการ' : 'ดูโครงการ'}
+      footer={
+        <>
+          <button className="mes-btn mes-btn-ghost" onClick={onClose}>ปิด</button>
+          {isEditing && (
+            <button className="mes-btn mes-btn-primary" onClick={handleSave}>บันทึก</button>
+          )}
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        <div>
+          <label className="mes-label" htmlFor="pm-name">ชื่อโครงการ</label>
+          <input
+            id="pm-name"
+            name="name"
+            className="mes-input"
+            value={formData.name}
+            onChange={handleChange}
+            disabled={!isEditing}
+          />
+        </div>
+        <div>
+          <label className="mes-label" htmlFor="pm-code">รหัสโครงการ</label>
+          <input
+            id="pm-code"
+            name="project_code"
+            className="mes-input font-mono"
+            value={formData.project_code}
+            onChange={handleChange}
+            disabled={!isEditing}
+          />
+        </div>
+        <div>
+          <div className="mes-label">สถานะ</div>
+          <StatusBadge status={formData.status} kind="sem" />
+        </div>
+      </div>
+    </Modal>
+  );
 };
 
 export default ProjectModal;

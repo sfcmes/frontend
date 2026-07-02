@@ -1,134 +1,85 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Grid,
-  Typography,
-  TableContainer,
-  Paper,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  Chip,
-  Button,
-  Stack,
-} from '@mui/material';
+// [MES] FormProject — project list + create form + view/edit modal.
+// Data logic identical to previous implementation; alert()/window.confirm → toast/ConfirmDialog.
+import { useState, useEffect } from 'react';
 import PageContainer from '../../components/container/PageContainer';
 import FVProject from '../../components/forms/form-validation/FVProject';
 import ProjectModal from './ProjectModal';
 import api, { fetchProjects, createProject, updateProject, deleteProject } from 'src/utils/api';
+import { StatusBadge } from 'src/components/mes/StatusBadge';
+import { ConfirmDialog, EmptyState, useToast, CardHeader } from 'src/components/mes/ui';
 
-const ProjectTable = ({ projects, onView, onEdit, onDelete }) => (
-  <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 440 }}>
-    <Table stickyHeader aria-label="project table">
-      <TableHead>
-        <TableRow>
-          <TableCell>
-            <Typography variant="h6" fontWeight="500">
-              ชื่อโครงการ
-            </Typography>
-          </TableCell>
-          <TableCell>
-            <Typography variant="h6" fontWeight="500">
-              รหัสโครงการ
-            </Typography>
-          </TableCell>
-          <TableCell>
-            <Typography variant="h6" fontWeight="500">
-              Status
-            </Typography>
-          </TableCell>
-          <TableCell>
-            <Typography variant="h6" fontWeight="500">
-              ชั้น
-            </Typography>
-          </TableCell>
-          <TableCell>
-            <Typography variant="h6" fontWeight="500">
-              ชิ้นงาน
-            </Typography>
-          </TableCell>
-          <TableCell>
-            <Typography variant="h6" fontWeight="500">
-              Actions
-            </Typography>
-          </TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {projects.map((project) => (
-          <TableRow hover key={project.id}>
-            <TableCell>
-              <Typography variant="subtitle2" fontWeight="600">
-                {project.name}
-              </Typography>
-            </TableCell>
-            <TableCell>
-              <Typography variant="subtitle2" fontWeight="600">
-                {project.project_code}
-              </Typography>
-            </TableCell>
-            <TableCell>
-              <Chip
-                sx={{
-                  bgcolor:
-                    project.status === 'In Progress'
-                      ? (theme) => theme.palette.warning.light
-                      : project.status === 'Completed'
-                      ? (theme) => theme.palette.success.light
-                      : project.status === 'Delayed'
-                      ? (theme) => theme.palette.error.light
-                      : (theme) => theme.palette.secondary.light,
-                  color:
-                    project.status === 'In Progress'
-                      ? (theme) => theme.palette.warning.main
-                      : project.status === 'Completed'
-                      ? (theme) => theme.palette.success.main
-                      : project.status === 'Delayed'
-                      ? (theme) => theme.palette.error.main
-                      : (theme) => theme.palette.secondary.main,
-                  borderRadius: '8px',
-                }}
-                size="small"
-                label={project.status}
-              />
-            </TableCell>
-            <TableCell>
-              <Typography color="textSecondary" variant="subtitle2">
-                {project.sections}
-              </Typography>
-            </TableCell>
-            <TableCell>
-              <Typography color="textSecondary" variant="subtitle2">
-                {project.components}
-              </Typography>
-            </TableCell>
-            <TableCell>
-              <Stack direction="row" spacing={1}>
-                <Button onClick={() => onView(project)} variant="contained" color="primary" size="small">
-                  View
-                </Button>
-                <Button onClick={() => onEdit(project)} variant="contained" color="secondary" size="small">
-                  Edit
-                </Button>
-                <Button onClick={() => onDelete(project.id)} variant="contained" color="error" size="small">
-                  Delete
-                </Button>
-              </Stack>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  </TableContainer>
+const RowActions = ({ project, onView, onEdit, onDelete }) => (
+  <div className="flex gap-1.5">
+    <button className="mes-btn mes-btn-ghost !min-h-touch md:!min-h-0 md:!py-1.5 text-xs" onClick={() => onView(project)}>ดู</button>
+    <button className="mes-btn mes-btn-ghost !min-h-touch md:!min-h-0 md:!py-1.5 text-xs" onClick={() => onEdit(project)}>แก้ไข</button>
+    <button className="mes-btn mes-btn-danger !min-h-touch md:!min-h-0 md:!py-1.5 text-xs" onClick={() => onDelete(project.id)}>ลบ</button>
+  </div>
 );
 
+const ProjectList = ({ projects, onView, onEdit, onDelete }) => (
+  projects.length === 0 ? (
+    <EmptyState icon="home-plus" title="ยังไม่มีโครงการ" />
+  ) : (
+    <>
+      {/* base: cards */}
+      <div className="flex flex-col gap-2 p-3 md:hidden">
+        {projects.map((project) => (
+          <div key={project.id} className="mes-card p-3">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 grow">
+                <div className="truncate text-sm font-semibold">{project.name}</div>
+                <div className="font-mono text-xs text-mes-muted">{project.project_code}</div>
+              </div>
+              <StatusBadge status={project.status} kind="sem" />
+            </div>
+            <div className="mt-1.5 flex gap-4 text-xs text-mes-muted tabular-nums">
+              <span>{project.sections} ชั้น</span>
+              <span>{project.components} ชิ้นงาน</span>
+            </div>
+            <div className="mt-2">
+              <RowActions project={project} onView={onView} onEdit={onEdit} onDelete={onDelete} />
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* md+: table */}
+      <div className="hidden md:block max-h-[440px] overflow-y-auto">
+        <table className="w-full">
+          <thead className="sticky top-0 bg-mes-surface">
+            <tr>
+              <th className="mes-th">ชื่อโครงการ</th>
+              <th className="mes-th">รหัสโครงการ</th>
+              <th className="mes-th">สถานะ</th>
+              <th className="mes-th text-right">ชั้น</th>
+              <th className="mes-th text-right">ชิ้นงาน</th>
+              <th className="mes-th text-right">การจัดการ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {projects.map((project) => (
+              <tr key={project.id} className="hover:bg-mes-surface-2">
+                <td className="mes-td font-semibold"><span className="block max-w-[220px] truncate">{project.name}</span></td>
+                <td className="mes-td font-mono text-xs">{project.project_code}</td>
+                <td className="mes-td"><StatusBadge status={project.status} kind="sem" /></td>
+                <td className="mes-td text-right">{project.sections}</td>
+                <td className="mes-td text-right">{project.components}</td>
+                <td className="mes-td"><div className="flex justify-end"><RowActions project={project} onView={onView} onEdit={onEdit} onDelete={onDelete} /></div></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  )
+);
 
 const FormProject = () => {
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [isModalOpen, setModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const { showToast, toastNode } = useToast();
 
   const fetchProjectsData = async () => {
     try {
@@ -137,12 +88,13 @@ const FormProject = () => {
       const response = await fetchProjects();
       setProjects(response.data);
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      showToast('โหลดข้อมูลไม่สำเร็จ', 'error');
     }
   };
 
   useEffect(() => {
     fetchProjectsData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAddProject = async (newProject) => {
@@ -150,10 +102,10 @@ const FormProject = () => {
       const token = localStorage.getItem('token');
       api.setToken(token);
       await createProject(newProject);
+      showToast('บันทึกโครงการแล้ว');
       fetchProjectsData();
     } catch (error) {
-      console.error('Error saving project:', error);
-      alert('Error saving project: ' + error.message);
+      showToast(`บันทึกไม่สำเร็จ: ${error.message}`, 'error');
     }
   };
 
@@ -176,50 +128,46 @@ const FormProject = () => {
       await updateProject(updatedProject.id, updatedProject);
       fetchProjectsData();
       setModalOpen(false);
+      showToast('บันทึกการแก้ไขแล้ว');
     } catch (error) {
-      console.error('Error updating project:', error);
-      alert('Error updating project: ' + error.message);
+      showToast(`แก้ไขไม่สำเร็จ: ${error.message}`, 'error');
     }
   };
 
-  const handleDeleteProject = async (projectId) => {
+  const handleDeleteProject = async () => {
+    const projectId = deleteId;
+    setDeleteId(null);
+    if (!projectId) return;
     try {
-      if (window.confirm('Are you sure you want to delete this project and ALL associated data? This action cannot be undone.')) {
-        const token = localStorage.getItem('token');
-        api.setToken(token);
-        await deleteProject(projectId);
-        fetchProjectsData(); // Refresh the project list
-        alert('Project and all associated data deleted successfully');
-      }
+      const token = localStorage.getItem('token');
+      api.setToken(token);
+      await deleteProject(projectId);
+      fetchProjectsData();
+      showToast('ลบโครงการและข้อมูลที่เกี่ยวข้องทั้งหมดแล้ว');
     } catch (error) {
-      console.error('Error deleting project:', error);
-      alert('Error deleting project and its associated data: ' + (error.response?.data?.details || error.message));
+      showToast(`ลบไม่สำเร็จ: ${error.response?.data?.details || error.message}`, 'error');
     }
   };
+
   return (
     <PageContainer title="สร้างโครงการใหม่" description="This is the form to create a new project.">
-      <Grid container spacing={2}>
-        <Grid item xs={12} lg={6}>
-          <div className="mes-card" style={{ overflow: 'hidden' }}>
-            <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--line)', fontWeight: 700, fontSize: '17px', color: 'var(--ink)' }}>
-              ภาพรวมโครงการ
-            </div>
-            <div style={{ padding: '20px' }}>
-              <ProjectTable projects={projects} onView={handleViewProject} onEdit={handleEditProject} onDelete={handleDeleteProject} />
-            </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="mes-card self-start">
+          <CardHeader title="ภาพรวมโครงการ" />
+          <ProjectList
+            projects={projects}
+            onView={handleViewProject}
+            onEdit={handleEditProject}
+            onDelete={(id) => setDeleteId(id)}
+          />
+        </div>
+        <div className="mes-card self-start">
+          <CardHeader title="สร้างโครงการใหม่" />
+          <div className="p-4 md:p-5">
+            <FVProject onAddProject={handleAddProject} />
           </div>
-        </Grid>
-        <Grid item xs={12} lg={6}>
-          <div className="mes-card" style={{ overflow: 'hidden' }}>
-            <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--line)', fontWeight: 700, fontSize: '17px', color: 'var(--ink)' }}>
-              สร้างโครงการใหม่
-            </div>
-            <div style={{ padding: '20px' }}>
-              <FVProject onAddProject={handleAddProject} />
-            </div>
-          </div>
-        </Grid>
-      </Grid>
+        </div>
+      </div>
       <ProjectModal
         open={isModalOpen}
         project={selectedProject}
@@ -227,6 +175,16 @@ const FormProject = () => {
         onSave={handleUpdateProject}
         isEditing={isEditing}
       />
+      <ConfirmDialog
+        open={Boolean(deleteId)}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDeleteProject}
+        title="ลบโครงการ"
+        message="คุณแน่ใจว่าต้องการลบโครงการนี้และข้อมูลที่เกี่ยวข้องทั้งหมดหรือไม่? การดำเนินการนี้ไม่สามารถยกเลิกได้"
+        confirmLabel="ลบโครงการ"
+        danger
+      />
+      {toastNode}
     </PageContainer>
   );
 };

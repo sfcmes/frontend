@@ -1,12 +1,12 @@
+// [MES] FVPurchaseOrder — PO create/edit form (Formik + Yup, FieldArray line items).
+// Validation schema and save semantics identical to previous implementation.
 import { useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
-import {
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, TextField, MenuItem, IconButton, Grid, Typography, Box, Stack,
-} from '@mui/material';
 import { Formik, FieldArray } from 'formik';
 import * as Yup from 'yup';
 import { fetchProjects } from 'src/utils/api';
+import { Modal } from 'src/components/mes/ui';
+import { Icon } from 'src/components/mes/Icon';
 
 const UNITS = ['m³', 'kg', 'ชิ้น', 'ม.', 'อื่นๆ'];
 
@@ -35,10 +35,14 @@ const schema = Yup.object({
         unit: Yup.string().required(),
         quantity: Yup.number().typeError('ตัวเลข').positive('> 0').required('ระบุจำนวน'),
         notes: Yup.string().nullable(),
-      })
+      }),
     )
     .min(1, 'ต้องมีรายการอย่างน้อย 1 รายการ'),
 });
+
+const FieldError = ({ msg }) => (msg ? <div className="mt-1 text-xs text-sem-danger">{msg}</div> : null);
+FieldError.propTypes = { msg: PropTypes.node };
+FieldError.defaultProps = { msg: null };
 
 const FVPurchaseOrder = ({
   open, onClose, initialValues, lockProjectId, onSaveDraft, onSubmitForReview,
@@ -59,151 +63,187 @@ const FVPurchaseOrder = ({
   }, [initialValues, lockProjectId]);
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <Formik
-        initialValues={start}
-        validationSchema={schema}
-        enableReinitialize
-        onSubmit={() => {}}
-      >
-        {({ values, errors, touched, handleChange, handleBlur, validateForm, setTouched }) => {
-          const runWith = async (action) => {
-            const errs = await validateForm();
-            if (Object.keys(errs).length > 0) {
-              setTouched({
-                projectId: true, buyerEmail: true,
-                items: values.items.map(() => ({ materialName: true, quantity: true })),
-              });
-              return;
-            }
-            const cleanValues = {
-              ...values,
-              items: values.items.map((it) => {
-                const clean = { ...it };
-                delete clean._key;
-                return clean;
-              }),
-            };
-            await action(cleanValues);
+    <Formik
+      initialValues={start}
+      validationSchema={schema}
+      enableReinitialize
+      onSubmit={() => {}}
+    >
+      {({ values, errors, touched, handleChange, handleBlur, validateForm, setTouched }) => {
+        const runWith = async (action) => {
+          const errs = await validateForm();
+          if (Object.keys(errs).length > 0) {
+            setTouched({
+              projectId: true, buyerEmail: true,
+              items: values.items.map(() => ({ materialName: true, quantity: true })),
+            });
+            return;
+          }
+          const cleanValues = {
+            ...values,
+            items: values.items.map((it) => {
+              const clean = { ...it };
+              delete clean._key;
+              return clean;
+            }),
           };
+          await action(cleanValues);
+        };
 
-          return (
-            <>
-              <DialogTitle>{initialValues ? 'แก้ไขใบสั่งซื้อ' : 'สร้างใบสั่งซื้อวัตถุดิบ'}</DialogTitle>
-              <DialogContent dividers>
-                <Grid container spacing={2} sx={{ mt: 0 }}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      select fullWidth label="โครงการ" name="projectId"
-                      value={values.projectId} onChange={handleChange} onBlur={handleBlur}
-                      disabled={Boolean(lockProjectId)}
-                      error={touched.projectId && Boolean(errors.projectId)}
-                      helperText={touched.projectId && errors.projectId}
+        return (
+          <Modal
+            open={open}
+            onClose={onClose}
+            wide
+            title={initialValues ? 'แก้ไขใบสั่งซื้อ' : 'สร้างใบสั่งซื้อวัตถุดิบ'}
+            footer={
+              <>
+                <button className="mes-btn mes-btn-ghost" onClick={onClose}>ยกเลิก</button>
+                <button className="mes-btn mes-btn-ghost" onClick={() => runWith(onSaveDraft)}>บันทึก draft</button>
+                <button className="mes-btn mes-btn-primary" onClick={() => runWith(onSubmitForReview)}>ส่งให้ผู้จัดซื้อ</button>
+              </>
+            }
+          >
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mes-label" htmlFor="po-project">โครงการ</label>
+                <select
+                  id="po-project"
+                  className="mes-input"
+                  name="projectId"
+                  value={values.projectId}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  disabled={Boolean(lockProjectId)}
+                >
+                  <option value="">—</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <FieldError msg={touched.projectId && errors.projectId} />
+              </div>
+              <div>
+                <label className="mes-label" htmlFor="po-email">อีเมลผู้จัดซื้อ</label>
+                <input
+                  id="po-email"
+                  className="mes-input"
+                  type="email"
+                  name="buyerEmail"
+                  value={values.buyerEmail}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
+                <FieldError msg={touched.buyerEmail && errors.buyerEmail} />
+              </div>
+              <div>
+                <label className="mes-label" htmlFor="po-date">กำหนดส่งที่ต้องการ</label>
+                <input
+                  id="po-date"
+                  className="mes-input"
+                  type="date"
+                  name="requestedDeliveryDate"
+                  value={values.requestedDeliveryDate || ''}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mes-label" htmlFor="po-notes">หมายเหตุ</label>
+                <textarea
+                  id="po-notes"
+                  className="mes-input"
+                  rows={2}
+                  name="notes"
+                  value={values.notes || ''}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 mb-2 text-sm font-semibold">รายการวัสดุ</div>
+            <FieldArray name="items">
+              {({ push, remove }) => (
+                <div className="flex flex-col gap-3">
+                  {values.items.map((item, i) => {
+                    const itErr = (errors.items && errors.items[i]) || {};
+                    const itTouch = (touched.items && touched.items[i]) || {};
+                    return (
+                      <div key={item._key} className="rounded-md border border-mes-border p-3">
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_110px_110px_1fr_auto]">
+                          <div className="col-span-2 sm:col-span-1">
+                            <label className="mes-label">ชื่อวัสดุ</label>
+                            <input
+                              className="mes-input"
+                              name={`items.${i}.materialName`}
+                              value={item.materialName}
+                              onChange={handleChange}
+                              onBlur={handleBlur}
+                            />
+                            <FieldError msg={itTouch.materialName && itErr.materialName} />
+                          </div>
+                          <div>
+                            <label className="mes-label">หน่วย</label>
+                            <select
+                              className="mes-input"
+                              name={`items.${i}.unit`}
+                              value={item.unit}
+                              onChange={handleChange}
+                            >
+                              {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="mes-label">จำนวน</label>
+                            <input
+                              className="mes-input"
+                              type="number"
+                              inputMode="decimal"
+                              name={`items.${i}.quantity`}
+                              value={item.quantity}
+                              onChange={handleChange}
+                              onBlur={handleBlur}
+                            />
+                            <FieldError msg={itTouch.quantity && itErr.quantity} />
+                          </div>
+                          <div>
+                            <label className="mes-label">หมายเหตุ</label>
+                            <input
+                              className="mes-input"
+                              name={`items.${i}.notes`}
+                              value={item.notes || ''}
+                              onChange={handleChange}
+                            />
+                          </div>
+                          <div className="flex items-end">
+                            <button
+                              type="button"
+                              className="mes-btn mes-btn-ghost !px-3"
+                              aria-label="ลบรายการ"
+                              onClick={() => values.items.length > 1 && remove(i)}
+                            >
+                              <Icon name="x" size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div>
+                    <button
+                      type="button"
+                      className="mes-btn mes-btn-ghost"
+                      onClick={() => push({ ...EMPTY_ITEM, _key: newItemKey() })}
                     >
-                      {projects.map((p) => (
-                        <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth label="อีเมลผู้จัดซื้อ" name="buyerEmail"
-                      value={values.buyerEmail} onChange={handleChange} onBlur={handleBlur}
-                      error={touched.buyerEmail && Boolean(errors.buyerEmail)}
-                      helperText={touched.buyerEmail && errors.buyerEmail}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth type="date" label="กำหนดส่งที่ต้องการ"
-                      InputLabelProps={{ shrink: true }}
-                      name="requestedDeliveryDate"
-                      value={values.requestedDeliveryDate || ''} onChange={handleChange}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth multiline minRows={2} label="หมายเหตุ" name="notes"
-                      value={values.notes || ''} onChange={handleChange}
-                    />
-                  </Grid>
-                </Grid>
-
-                <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>รายการวัสดุ</Typography>
-                <FieldArray name="items">
-                  {({ push, remove }) => (
-                    <Stack spacing={1}>
-                      {values.items.map((item, i) => {
-                        const itErr = (errors.items && errors.items[i]) || {};
-                        const itTouch = (touched.items && touched.items[i]) || {};
-                        return (
-                          <Grid container spacing={1} key={item._key} alignItems="flex-start">
-                            <Grid item xs={12} sm={4}>
-                              <TextField
-                                fullWidth size="small" label="ชื่อวัสดุ"
-                                name={`items.${i}.materialName`}
-                                value={item.materialName} onChange={handleChange} onBlur={handleBlur}
-                                error={itTouch.materialName && Boolean(itErr.materialName)}
-                                helperText={itTouch.materialName && itErr.materialName}
-                              />
-                            </Grid>
-                            <Grid item xs={6} sm={2}>
-                              <TextField
-                                select fullWidth size="small" label="หน่วย"
-                                name={`items.${i}.unit`}
-                                value={item.unit} onChange={handleChange}
-                              >
-                                {UNITS.map((u) => <MenuItem key={u} value={u}>{u}</MenuItem>)}
-                              </TextField>
-                            </Grid>
-                            <Grid item xs={6} sm={2}>
-                              <TextField
-                                fullWidth size="small" type="number" label="จำนวน"
-                                name={`items.${i}.quantity`}
-                                value={item.quantity} onChange={handleChange} onBlur={handleBlur}
-                                error={itTouch.quantity && Boolean(itErr.quantity)}
-                                helperText={itTouch.quantity && itErr.quantity}
-                              />
-                            </Grid>
-                            <Grid item xs={10} sm={3}>
-                              <TextField
-                                fullWidth size="small" label="หมายเหตุ"
-                                name={`items.${i}.notes`}
-                                value={item.notes || ''} onChange={handleChange}
-                              />
-                            </Grid>
-                            <Grid item xs={2} sm={1}>
-                              <IconButton
-                                aria-label="remove"
-                                onClick={() => values.items.length > 1 && remove(i)}
-                              >
-                                ✕
-                              </IconButton>
-                            </Grid>
-                          </Grid>
-                        );
-                      })}
-                      <Box>
-                        <Button onClick={() => push({ ...EMPTY_ITEM, _key: newItemKey() })}>+ เพิ่มรายการ</Button>
-                      </Box>
-                    </Stack>
-                  )}
-                </FieldArray>
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={onClose}>ยกเลิก</Button>
-                <Button variant="outlined" onClick={() => runWith(onSaveDraft)}>
-                  บันทึก draft
-                </Button>
-                <Button variant="contained" onClick={() => runWith(onSubmitForReview)}>
-                  ส่งให้ผู้จัดซื้อ
-                </Button>
-              </DialogActions>
-            </>
-          );
-        }}
-      </Formik>
-    </Dialog>
+                      <Icon name="plus" size={15} /> เพิ่มรายการ
+                    </button>
+                  </div>
+                </div>
+              )}
+            </FieldArray>
+          </Modal>
+        );
+      }}
+    </Formik>
   );
 };
 
