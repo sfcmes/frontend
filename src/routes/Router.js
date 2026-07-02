@@ -1,110 +1,25 @@
-import React, { lazy } from 'react';
+// [MES] Router — MES routes only. Template demo routes deleted (ADR-0005).
+import { lazy } from 'react';
 import { Navigate } from 'react-router-dom';
 
-import Loadable from '../layouts/full/shared/loadable/Loadable';
+import Loadable from '../components/shared/Loadable';
 
 /* ***Layouts**** */
-const FullLayout = Loadable(lazy(() => import('../layouts/full/FullLayout')));
+const MesShell = Loadable(lazy(() => import('../layouts/mes/MesShell')));
 const BlankLayout = Loadable(lazy(() => import('../layouts/blank/BlankLayout')));
-const ModernLayout = Loadable(lazy(() => import('../views/dashboard/modern-redesign/ModernLayout')));
 
 /* ****Pages***** */
-const ModernDash = Loadable(lazy(() => import('../views/dashboard/modern-redesign/ModernDashboard')));
-const EcommerceDash = Loadable(lazy(() => import('../views/dashboard/Ecommerce')));
-
-/* ****Apps***** */
-const Chats = Loadable(lazy(() => import('../views/apps/chat/Chat')));
-const Notes = Loadable(lazy(() => import('../views/apps/notes/Notes')));
-const Calendar = Loadable(lazy(() => import('../views/apps/calendar/BigCalendar')));
-const Email = Loadable(lazy(() => import('../views/apps/email/Email')));
-const Blog = Loadable(lazy(() => import('../views/apps/blog/Blog')));
-const BlogDetail = Loadable(lazy(() => import('../views/apps/blog/BlogPost')));
-const Tickets = Loadable(lazy(() => import('../views/apps/tickets/Tickets')));
-const TicketList = Loadable(lazy(() => import('../views/apps/tickets/TicketList')));
-const Contacts = Loadable(lazy(() => import('../views/apps/contacts/Contacts')));
-const Ecommerce = Loadable(lazy(() => import('../views/apps/eCommerce/Ecommerce')));
-const EcommerceDetail = Loadable(lazy(() => import('../views/apps/eCommerce/EcommerceDetail')));
-const EcomProductList = Loadable(lazy(() => import('../views/apps/eCommerce/EcomProductList')));
-const EcomProductCheckout = Loadable(
-  lazy(() => import('../views/apps/eCommerce/EcommerceCheckout')),
-);
-const UserProfile = Loadable(lazy(() => import('../views/apps/user-profile/UserProfile')));
-const Followers = Loadable(lazy(() => import('../views/apps/user-profile/Followers')));
-const Friends = Loadable(lazy(() => import('../views/apps/user-profile/Friends')));
-const Gallery = Loadable(lazy(() => import('../views/apps/user-profile/Gallery')));
-
-// Pages
-const RollbaseCASL = Loadable(lazy(() => import('../views/pages/rollbaseCASL/RollbaseCASL')));
-const Treeview = Loadable(lazy(() => import('../views/pages/treeview/Treeview')));
-const Pricing = Loadable(lazy(() => import('../views/pages/pricing/Pricing')));
-const AccountSetting = Loadable(
-  lazy(() => import('../views/pages/account-setting/AccountSetting')),
-);
-const Faq = Loadable(lazy(() => import('../views/pages/faq/Faq')));
+const Dashboard = Loadable(lazy(() => import('../views/mes/dashboard/Dashboard')));
 const QRCodePage = Loadable(lazy(() => import('../views/pages/qrcode/QRCodePage')));
 const ComponentDetailsPage = Loadable(lazy(() => import('../views/pages/qrcode/ComponentDetailsPage')));
 
-// widget
-const WidgetCards = Loadable(lazy(() => import('../views/widgets/cards/WidgetCards')));
-const WidgetBanners = Loadable(lazy(() => import('../views/widgets/banners/WidgetBanners')));
-const WidgetCharts = Loadable(lazy(() => import('../views/widgets/charts/WidgetCharts')));
-
-// form elements
-const MuiAutoComplete = Loadable(
-  lazy(() => import('../views/forms/form-elements/MuiAutoComplete')),
-);
-const MuiButton = Loadable(lazy(() => import('../views/forms/form-elements/MuiButton')));
-const MuiCheckbox = Loadable(lazy(() => import('../views/forms/form-elements/MuiCheckbox')));
-const MuiRadio = Loadable(lazy(() => import('../views/forms/form-elements/MuiRadio')));
-const MuiSlider = Loadable(lazy(() => import('../views/forms/form-elements/MuiSlider')));
-const MuiDateTime = Loadable(lazy(() => import('../views/forms/form-elements/MuiDateTime')));
-const MuiSwitch = Loadable(lazy(() => import('../views/forms/form-elements/MuiSwitch')));
-
-// MES form layouts
+// MES forms
 const FormProject = Loadable(lazy(() => import('../views/forms/FormProject')));
 const FormComponent = Loadable(lazy(() => import('../views/forms/FormComponent')));
 const FormSection = Loadable(lazy(() => import('../views/forms/FormSection')));
 const FormQRCodeReader = Loadable(lazy(() => import('../views/forms/FormQRCodeReader')));
 const FormPO = Loadable(lazy(() => import('../views/forms/FormPO')));
-const FormLayouts = Loadable(lazy(() => import('../views/forms/FormLayouts')));
-const FormCustom = Loadable(lazy(() => import('../views/forms/FormCustom')));
-const FormWizard = Loadable(lazy(() => import('../views/forms/FormWizard')));
-const FormValidation = Loadable(lazy(() => import('../views/forms/FormValidation')));
-const QuillEditor = Loadable(lazy(() => import('../views/forms/quill-editor/QuillEditor')));
-const FormHorizontal = Loadable(lazy(() => import('../views/forms/FormHorizontal')));
-const FormVertical = Loadable(lazy(() => import('../views/forms/FormVertical')));
 const FormComponentCard = Loadable(lazy(() => import('../views/forms/FormComponentCard')));
-
-// tables
-const BasicTable = Loadable(lazy(() => import('../views/tables/BasicTable')));
-const CollapsibleTable = Loadable(lazy(() => import('../views/tables/CollapsibleTable')));
-const EnhancedTable = Loadable(lazy(() => import('../views/tables/EnhancedTable')));
-const FixedHeaderTable = Loadable(lazy(() => import('../views/tables/FixedHeaderTable')));
-const PaginationTable = Loadable(lazy(() => import('../views/tables/PaginationTable')));
-const SearchTable = Loadable(lazy(() => import('../views/tables/SearchTable')));
-
-// chart
-const LineChart = Loadable(lazy(() => import('../views/charts/LineChart')));
-const GredientChart = Loadable(lazy(() => import('../views/charts/GredientChart')));
-const DoughnutChart = Loadable(lazy(() => import('../views/charts/DoughnutChart')));
-const AreaChart = Loadable(lazy(() => import('../views/charts/AreaChart')));
-const ColumnChart = Loadable(lazy(() => import('../views/charts/ColumnChart')));
-const CandlestickChart = Loadable(lazy(() => import('../views/charts/CandlestickChart')));
-const RadialbarChart = Loadable(lazy(() => import('../views/charts/RadialbarChart')));
-
-// ui
-const MuiAlert = Loadable(lazy(() => import('../views/ui-components/MuiAlert')));
-const MuiAccordion = Loadable(lazy(() => import('../views/ui-components/MuiAccordion')));
-const MuiAvatar = Loadable(lazy(() => import('../views/ui-components/MuiAvatar')));
-const MuiChip = Loadable(lazy(() => import('../views/ui-components/MuiChip')));
-const MuiDialog = Loadable(lazy(() => import('../views/ui-components/MuiDialog')));
-const MuiList = Loadable(lazy(() => import('../views/ui-components/MuiList')));
-const MuiPopover = Loadable(lazy(() => import('../views/ui-components/MuiPopover')));
-const MuiRating = Loadable(lazy(() => import('../views/ui-components/MuiRating')));
-const MuiTabs = Loadable(lazy(() => import('../views/ui-components/MuiTabs')));
-const MuiTooltip = Loadable(lazy(() => import('../views/ui-components/MuiTooltip')));
-const MuiTransferList = Loadable(lazy(() => import('../views/ui-components/MuiTransferList')));
-const MuiTypography = Loadable(lazy(() => import('../views/ui-components/MuiTypography')));
 
 // authentication
 const Register = Loadable(lazy(() => import('../views/authentication/auth1/Register')));
@@ -112,9 +27,6 @@ const ManageUser = Loadable(lazy(() => import('../views/authentication/auth1/Man
 const ForgotPassword = Loadable(lazy(() => import('../views/authentication/auth1/ForgotPassword')));
 const Error = Loadable(lazy(() => import('../views/authentication/Error')));
 const Login = Loadable(lazy(() => import('../views/authentication/auth1/Login')));
-
-// landingpage
-const Landingpage = Loadable(lazy(() => import('../views/pages/landingpage/Landingpage')));
 
 // Auth guard — redirects unauthenticated requests to login
 const AuthWrapper = ({ children }) => {
@@ -125,21 +37,20 @@ const AuthWrapper = ({ children }) => {
 
 const Router = [
   // ── GROUP 1: Public MES dashboard ──────────────────────────────────────────
-  // ModernLayout with no auth gate. Dashboard is intentionally public.
+  // MesShell with no auth gate. Dashboard is intentionally public (CONTEXT.md).
   {
     path: '/',
-    element: <ModernLayout />,
+    element: <MesShell />,
     children: [
       { path: '/', element: <Navigate to="/dashboards/modern" /> },
-      { path: '/dashboards/modern', element: <ModernDash /> },
+      { path: '/dashboards/modern', element: <Dashboard /> },
     ],
   },
 
   // ── GROUP 2: Protected MES pages ───────────────────────────────────────────
-  // Auth required, ModernLayout — same sidebar + topbar as dashboard.
   {
     path: '/',
-    element: <AuthWrapper><ModernLayout /></AuthWrapper>,
+    element: <AuthWrapper><MesShell /></AuthWrapper>,
     children: [
       { path: '/forms/form-project', element: <FormProject /> },
       { path: '/forms/form-section', element: <FormSection /> },
@@ -150,8 +61,7 @@ const Router = [
     ],
   },
 
-  // ── GROUP 3: Public pages (auth, QR scan, card view) ───────────────────────
-  // BlankLayout — no sidebar, no auth gate.
+  // ── GROUP 3: Public pages (auth + QR scan flow) ────────────────────────────
   {
     path: '/',
     element: <BlankLayout />,
@@ -163,81 +73,6 @@ const Router = [
       { path: '/auth/404', element: <Error /> },
       { path: '/component/:id', element: <ComponentDetailsPage /> },
       { path: '/forms/form-component-card/:id', element: <FormComponentCard /> },
-    ],
-  },
-
-  // ── GROUP 4: Protected template pages ──────────────────────────────────────
-  // Auth required, FullLayout — original MUI template shell.
-  // Only used for the UI template demo pages (apps, tables, charts, etc.).
-  // Catches all unmatched routes with the 404 wildcard.
-  {
-    path: '/',
-    element: <AuthWrapper><FullLayout /></AuthWrapper>,
-    children: [
-      { path: '/apps/chats', element: <Chats /> },
-      { path: '/apps/notes', element: <Notes /> },
-      { path: '/apps/calendar', element: <Calendar /> },
-      { path: '/apps/email', element: <Email /> },
-      { path: '/apps/tickets', element: <Tickets /> },
-      { path: '/apps/tickets/list', element: <TicketList /> },
-      { path: '/apps/contacts', element: <Contacts /> },
-      { path: '/apps/ecommerce/shop', element: <Ecommerce /> },
-      { path: '/apps/blog/posts', element: <Blog /> },
-      { path: '/apps/blog/detail/:id', element: <BlogDetail /> },
-      { path: '/apps/ecommerce/eco-product-list', element: <EcomProductList /> },
-      { path: '/apps/ecommerce/eco-checkout', element: <EcomProductCheckout /> },
-      { path: '/apps/ecommerce/detail/:id', element: <EcommerceDetail /> },
-      { path: '/apps/followers', element: <Followers /> },
-      { path: '/apps/friends', element: <Friends /> },
-      { path: '/apps/gallery', element: <Gallery /> },
-      { path: '/user-profile', element: <UserProfile /> },
-      { path: '/pages/casl', element: <RollbaseCASL /> },
-      { path: '/pages/treeview', element: <Treeview /> },
-      { path: '/pages/pricing', element: <Pricing /> },
-      { path: '/pages/account-settings', element: <AccountSetting /> },
-      { path: '/pages/faq', element: <Faq /> },
-      { path: '/forms/form-elements/autocomplete', element: <MuiAutoComplete /> },
-      { path: '/forms/form-elements/button', element: <MuiButton /> },
-      { path: '/forms/form-elements/checkbox', element: <MuiCheckbox /> },
-      { path: '/forms/form-elements/radio', element: <MuiRadio /> },
-      { path: '/forms/form-elements/slider', element: <MuiSlider /> },
-      { path: '/forms/form-elements/date-time', element: <MuiDateTime /> },
-      { path: '/forms/form-elements/switch', element: <MuiSwitch /> },
-      { path: '/forms/quill-editor', element: <QuillEditor /> },
-      { path: '/forms/form-layouts', element: <FormLayouts /> },
-      { path: '/forms/form-horizontal', element: <FormHorizontal /> },
-      { path: '/forms/form-vertical', element: <FormVertical /> },
-      { path: '/forms/form-custom', element: <FormCustom /> },
-      { path: '/forms/form-wizard', element: <FormWizard /> },
-      { path: '/forms/form-validation', element: <FormValidation /> },
-      { path: '/tables/basic', element: <BasicTable /> },
-      { path: '/tables/collapsible', element: <CollapsibleTable /> },
-      { path: '/tables/enhanced', element: <EnhancedTable /> },
-      { path: '/tables/fixed-header', element: <FixedHeaderTable /> },
-      { path: '/tables/pagination', element: <PaginationTable /> },
-      { path: '/tables/search', element: <SearchTable /> },
-      { path: '/charts/line-chart', element: <LineChart /> },
-      { path: '/charts/gredient-chart', element: <GredientChart /> },
-      { path: '/charts/doughnut-pie-chart', element: <DoughnutChart /> },
-      { path: '/charts/area-chart', element: <AreaChart /> },
-      { path: '/charts/column-chart', element: <ColumnChart /> },
-      { path: '/charts/candlestick-chart', element: <CandlestickChart /> },
-      { path: '/charts/radialbar-chart', element: <RadialbarChart /> },
-      { path: '/ui-components/alert', element: <MuiAlert /> },
-      { path: '/ui-components/accordion', element: <MuiAccordion /> },
-      { path: '/ui-components/avatar', element: <MuiAvatar /> },
-      { path: '/ui-components/chip', element: <MuiChip /> },
-      { path: '/ui-components/dialog', element: <MuiDialog /> },
-      { path: '/ui-components/list', element: <MuiList /> },
-      { path: '/ui-components/popover', element: <MuiPopover /> },
-      { path: '/ui-components/rating', element: <MuiRating /> },
-      { path: '/ui-components/tabs', element: <MuiTabs /> },
-      { path: '/ui-components/tooltip', element: <MuiTooltip /> },
-      { path: '/ui-components/transfer-list', element: <MuiTransferList /> },
-      { path: '/ui-components/typography', element: <MuiTypography /> },
-      { path: '/widgets/cards', element: <WidgetCards /> },
-      { path: '/widgets/banners', element: <WidgetBanners /> },
-      { path: '/widgets/charts', element: <WidgetCharts /> },
       { path: '*', element: <Navigate to="/auth/404" /> },
     ],
   },
