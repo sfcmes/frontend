@@ -17,6 +17,7 @@ import useLandingCinematics from './useLandingCinematics';
 import videoBg from 'src/assets/videos/Slow_cinematic_dolly_shot_in.mp4';
 import videoPoster from 'src/assets/images/hero-poster.jpg';
 import heroBgStatic from 'src/assets/images/hero-bg-static.jpg';
+import profileCover from 'src/assets/images/profile-cover.jpg';
 
 // Lifecycle stages shown on the landing strip (workflow order, no rejected).
 // Labels come from status-meta (ADR-0006 rule 4); rendered in brand gold/muted
@@ -61,6 +62,40 @@ const CHAPTERS = [
 ];
 
 const thNumber = new Intl.NumberFormat('th-TH');
+
+// [MES] ProfileBookCard — e-book teaser for the hosted company profile.
+// Real cover thumbnail tilts upright on hover; magnetic under the cinematic
+// layer. Rendered twice: desktop company zone + mobile end-of-story.
+const ProfileBookCard = ({ className = '' }) => (
+  <a
+    href="https://sfcmes.github.io/sangfahpc.com/"
+    target="_blank"
+    rel="noreferrer"
+    data-magnetic
+    className={`group flex items-center gap-4 rounded-lg border border-mes-border bg-mes-surface p-4 transition-colors hover:border-brand-gold ${className}`}
+  >
+    <img
+      src={profileCover}
+      alt="ปก Company Profile — SFC Precast"
+      className="w-14 shrink-0 -rotate-3 rounded-sm shadow-overlay transition-transform duration-300 motion-safe:group-hover:rotate-0 motion-safe:group-hover:scale-105"
+    />
+    <span className="min-w-0 flex-1">
+      <span className="block font-mono text-[10px] tracking-[0.25em] text-mes-muted">
+        COMPANY PROFILE — E-BOOK
+      </span>
+      <span className="mt-1 block text-sm font-semibold">รู้จักแสงฟ้าให้มากขึ้น</span>
+      <span className="mt-1 block font-mono text-xs text-brand-gold">
+        เปิดอ่านฉบับเต็ม{' '}
+        <span
+          aria-hidden
+          className="inline-block transition-transform duration-300 motion-safe:group-hover:translate-x-1"
+        >
+          →
+        </span>
+      </span>
+    </span>
+  </a>
+);
 
 // [MES] PerfCard — flip card in the performance bento. Front: thin numeral +
 // site name. Back (on click/tap): live per-status rings for that project,
@@ -310,7 +345,7 @@ const Login = () => {
           <aside className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
             <div
               data-login-panel
-              className="mes-landing-rise lg:sticky lg:top-24 [--rise-delay:0.1s]"
+              className="mes-landing-rise lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1 [--rise-delay:0.1s]"
             >
               <div className="mes-fill-surface-80 rounded-lg border border-mes-border p-6 shadow-overlay backdrop-blur-md">
                 <AuthLogin />
@@ -320,19 +355,19 @@ const Login = () => {
                   travels inside the sticky wrapper so it never collides with it.
                   Facts from company-profile.pdf. Desktop-only: mobile keeps the
                   login card tight above the story. */}
-              <div className="mt-8 hidden lg:block">
+              <div className="mt-6 hidden lg:block">
                 <p className="font-mono text-xs tracking-[0.3em] text-mes-muted">
                   SFC PRECAST CO., LTD.
                 </p>
-                <p className="mt-3 text-sm leading-relaxed text-mes-muted">
+                <p className="mt-2 text-sm leading-relaxed text-mes-muted">
                   โรงงานผลิตชิ้นส่วนคอนกรีตสำเร็จรูปในเครือแสงฟ้าก่อสร้าง — ดำเนินธุรกิจด้วยความ
                   «มุ่งมั่น และ ซื่อสัตย์» มาตั้งแต่ปี 2512
                 </p>
-                <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-6">
+                <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
                   {COMPANY_STATS.map((stat) => (
-                    <div key={stat.label} className="border-t border-mes-border pt-3">
+                    <div key={stat.label} className="border-t border-mes-border pt-2">
                       <dt className="font-mono text-xs text-mes-muted">{stat.label}</dt>
-                      <dd className="mt-1 text-2xl font-bold">
+                      <dd className="mt-1 text-xl font-bold">
                         {stat.value}
                         {stat.unit && (
                           <span className="ml-1 text-sm font-normal text-mes-muted">
@@ -343,17 +378,7 @@ const Login = () => {
                     </div>
                   ))}
                 </dl>
-                <a
-                  href="https://www.sangfahpc.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-6 inline-flex items-center gap-2 font-mono text-xs tracking-[0.2em] text-mes-muted transition-colors hover:text-brand-gold"
-                >
-                  WWW.SANGFAHPC.COM
-                  <span className="text-brand-gold" aria-hidden>
-                    →
-                  </span>
-                </a>
+                <ProfileBookCard className="mt-4" />
               </div>
             </div>
           </aside>
@@ -442,6 +467,9 @@ const Login = () => {
               ))}
             </div>
 
+            {/* Mobile-only: the company-profile e-book card lives in the desktop
+                right column; phones get it at the end of the story instead. */}
+            <ProfileBookCard className="mt-12 lg:hidden" />
           </section>
         </div>
 

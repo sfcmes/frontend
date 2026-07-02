@@ -190,6 +190,19 @@
      generate nothing for colors defined as raw var(), so alpha lives here. */
   .mes-fill-surface-80 { background-color: color-mix(in srgb, var(--mes-surface) 80%, transparent); }
 
+  /* Sticky login column scrolls internally on short viewports — keep the
+     scrollbar unobtrusive (thin, border-toned, transparent track). */
+  .mes-landing [data-login-panel] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--mes-border) transparent;
+  }
+  .mes-landing [data-login-panel]::-webkit-scrollbar { width: 6px; }
+  .mes-landing [data-login-panel]::-webkit-scrollbar-thumb {
+    background: var(--mes-border);
+    border-radius: 3px;
+  }
+  .mes-landing [data-login-panel]::-webkit-scrollbar-track { background: transparent; }
+
   /* [MES] Landing perf flip-cards — CSS-only 3D flip + hover lift + ring pop.
      Works on mobile tap (no GSAP dependency); all motion is motion-safe. */
   .mes-flip {
