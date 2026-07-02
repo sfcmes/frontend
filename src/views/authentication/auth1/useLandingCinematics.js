@@ -11,9 +11,13 @@ export const CINEMATIC_QUERY =
 const matchesCinematic = () =>
   typeof window !== 'undefined' && window.matchMedia(CINEMATIC_QUERY).matches;
 
-export default function useLandingCinematics(rootRef) {
+// `contentReady` flags async-rendered content (live-data sections): their scroll
+// reveals attach in a second GSAP context once both GSAP and the data are in,
+// whichever arrives last.
+export default function useLandingCinematics(rootRef, contentReady = true) {
   const [active, setActive] = useState(matchesCinematic);
   const [settled, setSettled] = useState(false);
+  const [engine, setEngine] = useState(null);
   const settledRef = useRef(false);
   const markSettled = () => {
     settledRef.current = true;
@@ -40,6 +44,7 @@ export default function useLandingCinematics(rootRef) {
         const gsap = gsapModule.gsap || gsapModule.default;
         const ScrollTrigger = stModule.ScrollTrigger || stModule.default;
         gsap.registerPlugin(ScrollTrigger);
+        setEngine({ gsap, ScrollTrigger });
         const root = rootRef.current;
 
         ctx = gsap.context(() => {
@@ -225,8 +230,42 @@ export default function useLandingCinematics(rootRef) {
       cancelled = true;
       teardowns.forEach((fn) => fn());
       if (ctx) ctx.revert();
+      setEngine(null);
     };
   }, [active, rootRef]);
+
+  // Second context: scrubbed reveals for content that mounts after the intro
+  // context was created (e.g. API-fed performance cards).
+  useEffect(() => {
+    if (!engine || !contentReady || !rootRef.current) return undefined;
+    const root = rootRef.current;
+    const els = engine.gsap.utils.toArray('[data-perf-head], [data-perf-card]');
+    if (!els.length) return undefined;
+
+    const ctx = engine.gsap.context(() => {
+      els.forEach((el) => {
+        engine.gsap.fromTo(
+          el,
+          { opacity: 0, y: 48 },
+          {
+            opacity: 1,
+            y: 0,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: el,
+              start: 'clamp(top 96%)',
+              end: 'clamp(top 62%)',
+              scrub: 0.6,
+            },
+          },
+        );
+      });
+    }, root);
+    // New content changed the page height — recompute existing trigger ranges.
+    engine.ScrollTrigger.refresh();
+
+    return () => ctx.revert();
+  }, [engine, contentReady, rootRef]);
 
   return { active, settled };
 }

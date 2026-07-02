@@ -63,11 +63,11 @@ const Login = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const rootRef = useRef(null);
-  const { active, settled } = useLandingCinematics(rootRef);
   // Live numbers from the same public endpoint the dashboard uses — the
-  // "เรียลไทม์" chapter proves itself. Stays null (block not rendered) on
+  // "เรียลไทม์" chapter proves itself. Stays null (blocks not rendered) on
   // failure or empty data; fetchProjects never throws.
   const [liveStats, setLiveStats] = useState(null);
+  const { active, settled } = useLandingCinematics(rootRef, Boolean(liveStats));
 
   useEffect(() => {
     let mounted = true;
@@ -78,7 +78,16 @@ const Login = () => {
         (sum, p) => sum + (parseInt(p.components, 10) || 0),
         0,
       );
-      setLiveStats({ projects: projects.length, components });
+      // Top sites by component count feed the performance bento grid.
+      const top = [...projects]
+        .map((p) => ({
+          id: p.id,
+          name: p.name || p.project_code || '—',
+          components: parseInt(p.components, 10) || 0,
+        }))
+        .sort((a, b) => b.components - a.components)
+        .slice(0, 5);
+      setLiveStats({ projects: projects.length, components, top });
     });
     return () => {
       mounted = false;
@@ -303,11 +312,83 @@ const Login = () => {
               ))}
             </div>
 
-            <footer className="mt-16 border-t border-mes-border pt-5 font-mono text-xs text-mes-muted lg:mt-28">
-              SFC PRECAST — ระบบภายในสำหรับทีมผลิตและหน้างาน
-            </footer>
           </section>
         </div>
+
+        {/* Performance bento — real sites + component counts from the live API.
+            Spans the full container below both columns; hidden entirely when the
+            API has no data. Card sizes vary (featured 2x2, smalls, gold CTA). */}
+        {liveStats?.top?.length > 0 && (
+          <section className="relative z-10 mx-auto w-full max-w-6xl px-5 pb-16 pt-4 sm:px-8 lg:pt-12">
+            <div data-perf-head className="max-w-2xl">
+              <p className="flex items-center gap-2 font-mono text-xs tracking-[0.3em] text-mes-muted">
+                <span className="h-1.5 w-1.5 rounded-full bg-brand-gold" aria-hidden />
+                OUR PERFORMANCE
+              </p>
+              <h2 className="mt-3 text-3xl font-bold sm:text-4xl">
+                ผลงานที่พิสูจน์ได้ ทุกไซต์งาน
+              </h2>
+              <p className="mt-3 text-sm text-mes-muted sm:text-base">
+                โครงการจริงของลูกค้าที่เราดูแล — ตัวเลขดึงจากระบบสด ณ เวลานี้
+              </p>
+            </div>
+
+            <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Featured: largest site, on.energy-style numeral top-right */}
+              <div
+                data-perf-card
+                className="flex min-h-[220px] flex-col justify-between rounded-lg border border-mes-border bg-mes-surface p-6 sm:col-span-2 sm:row-span-2 sm:min-h-[360px] sm:p-8"
+              >
+                <div className="self-end text-right">
+                  <span className="text-6xl font-normal tabular-nums sm:text-8xl">
+                    {thNumber.format(liveStats.top[0].components)}
+                  </span>
+                  <span className="ml-2 font-mono text-xs text-mes-muted">ชิ้น</span>
+                </div>
+                <div>
+                  <div className="text-lg font-semibold sm:text-xl">{liveStats.top[0].name}</div>
+                  <div className="mt-1 font-mono text-xs text-mes-muted">
+                    ชิ้นงานที่ติดตามในโครงการนี้
+                  </div>
+                </div>
+              </div>
+
+              {/* Smaller site cards */}
+              {liveStats.top.slice(1).map((site) => (
+                <div
+                  key={site.id}
+                  data-perf-card
+                  className="flex min-h-[170px] flex-col justify-between rounded-lg border border-mes-border bg-mes-surface p-6"
+                >
+                  <div className="self-end text-4xl font-normal tabular-nums">
+                    {thNumber.format(site.components)}
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold">{site.name}</div>
+                    <div className="mt-1 font-mono text-xs text-mes-muted">ชิ้นงาน</div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Gold accent card — the one full-color card (brand gold, navy ink) */}
+              <Link
+                to="/dashboards/modern"
+                data-perf-card
+                data-magnetic
+                className="flex min-h-[170px] flex-col justify-between rounded-lg bg-brand-gold p-6 text-brand-navy"
+              >
+                <div className="font-mono text-xs">เปิดดูได้ ไม่ต้องเข้าสู่ระบบ</div>
+                <div className="text-lg font-bold">
+                  เปิดแดชบอร์ดสาธารณะ <span aria-hidden>→</span>
+                </div>
+              </Link>
+            </div>
+          </section>
+        )}
+
+        <footer className="relative z-10 mx-auto w-full max-w-6xl border-t border-mes-border px-5 pb-10 pt-5 font-mono text-xs text-mes-muted sm:px-8">
+          SFC PRECAST — ระบบภายในสำหรับทีมผลิตและหน้างาน
+        </footer>
       </div>
     </PageContainer>
   );
