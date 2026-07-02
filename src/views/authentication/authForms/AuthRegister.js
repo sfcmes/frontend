@@ -1,17 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Box, Typography, Button, Divider, MenuItem, Select, 
-  Checkbox, FormControlLabel, List, ListItem, ListItemIcon, 
-  ListItemText, Paper, InputAdornment, IconButton
-} from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import { Link } from 'react-router-dom';
-import CustomTextField from '../../../components/forms/theme-elements/CustomTextField';
-import CustomFormLabel from '../../../components/forms/theme-elements/CustomFormLabel';
-import { Stack } from '@mui/system';
+// [MES] AuthRegister — registration form with role + project assignment.
+// Registration/data logic identical to previous implementation.
+import { useState, useEffect } from 'react';
 import { registerUser, fetchRoles, fetchProjects } from 'src/utils/api';
+import { Icon } from 'src/components/mes/Icon';
 
-const AuthRegister = ({ title, subtitle, subtext }) => {
+const AuthRegister = () => {
   const [form, setForm] = useState({ name: '', email: '', password: '', roleId: '', projects: [] });
   const [roles, setRoles] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -21,25 +14,18 @@ const AuthRegister = ({ title, subtitle, subtext }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    const getRoles = async () => {
-      try {
-        const response = await fetchRoles();
-        setRoles(response.data);
-      } catch (error) {
-        console.error('Error fetching roles:', error);
-      }
-    };
-    const getProjects = async () => {
-      try {
-        const response = await fetchProjects();
+    fetchRoles()
+      .then((response) => setRoles(response.data))
+      .catch(() => setRoles([]));
+    fetchProjects()
+      .then((response) => {
         setProjects(response.data);
         setFilteredProjects(response.data);
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-      }
-    };
-    getRoles();
-    getProjects();
+      })
+      .catch(() => {
+        setProjects([]);
+        setFilteredProjects([]);
+      });
   }, []);
 
   const handleChange = (e) => {
@@ -47,15 +33,15 @@ const AuthRegister = ({ title, subtitle, subtext }) => {
   };
 
   const handleRoleChange = (e) => {
-    const selectedRole = roles.find(role => role.id === e.target.value);
+    const selectedRole = roles.find((role) => String(role.id) === String(e.target.value));
     setForm({ ...form, roleId: e.target.value });
-    setIsAdmin(selectedRole.name === 'Admin');
+    setIsAdmin(selectedRole?.name === 'Admin');
   };
 
   const handleProjectChange = (projectId) => {
-    setForm(prev => {
+    setForm((prev) => {
       const newProjects = prev.projects.includes(projectId)
-        ? prev.projects.filter(id => id !== projectId)
+        ? prev.projects.filter((id) => id !== projectId)
         : [...prev.projects, projectId];
       return { ...prev, projects: newProjects };
     });
@@ -63,125 +49,101 @@ const AuthRegister = ({ title, subtitle, subtext }) => {
 
   const handleSelectAll = (event) => {
     if (event.target.checked) {
-      setForm(prev => ({ ...prev, projects: filteredProjects.map(p => p.id) }));
+      setForm((prev) => ({ ...prev, projects: filteredProjects.map((p) => p.id) }));
     } else {
-      setForm(prev => ({ ...prev, projects: [] }));
+      setForm((prev) => ({ ...prev, projects: [] }));
     }
   };
 
   const handleSearch = (event) => {
-    const searchTerm = event.target.value.toLowerCase();
-    setSearchTerm(searchTerm);
-    const filtered = projects.filter(project => 
-      project.name.toLowerCase().includes(searchTerm)
-    );
-    setFilteredProjects(filtered);
+    const term = event.target.value.toLowerCase();
+    setSearchTerm(term);
+    setFilteredProjects(projects.filter((project) => project.name.toLowerCase().includes(term)));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await registerUser({ 
-        ...form, 
-        username: form.name, 
+      await registerUser({
+        ...form,
+        username: form.name,
         status: 'active',
-        projects: isAdmin ? projects.map(p => p.id) : form.projects
+        projects: isAdmin ? projects.map((p) => p.id) : form.projects,
       });
       window.location.href = '/auth/login';
-    } catch (error) {
-      setError('Registration failed. Please try again.');
+    } catch {
+      setError('ลงทะเบียนไม่สำเร็จ กรุณาลองอีกครั้ง');
     }
   };
 
   return (
-    <>
-      {title && <Typography fontWeight="700" variant="h3" mb={1}>{title}</Typography>}
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <h1 className="text-center text-lg font-bold">ลงทะเบียนผู้ใช้งาน</h1>
 
-      {subtext}
-      <Box mt={3}>
-        <Divider>
-          <Typography component="span" color="textSecondary" variant="h6" fontWeight="400" position="relative" px={2}>
-            ลงทะเบียนผู้ใช้งาน
-          </Typography>
-        </Divider>
-      </Box>
+      <div>
+        <label className="mes-label" htmlFor="name">ชื่อผู้ใช้งาน</label>
+        <input id="name" className="mes-input" value={form.name} onChange={handleChange} />
+      </div>
+      <div>
+        <label className="mes-label" htmlFor="email">อีเมล</label>
+        <input id="email" className="mes-input" type="email" value={form.email} onChange={handleChange} />
+      </div>
+      <div>
+        <label className="mes-label" htmlFor="password">รหัสผ่าน</label>
+        <input id="password" className="mes-input" type="password" autoComplete="new-password" value={form.password} onChange={handleChange} />
+      </div>
+      <div>
+        <label className="mes-label" htmlFor="roleId">บทบาท (Role)</label>
+        <select id="roleId" className="mes-input" value={form.roleId} onChange={handleRoleChange}>
+          <option value="">—</option>
+          {roles.map((role) => (
+            <option key={role.id} value={role.id}>{role.name}</option>
+          ))}
+        </select>
+      </div>
 
-      <Box component="form" onSubmit={handleSubmit}>
-        <Stack mb={3}>
-          <CustomFormLabel htmlFor="name">ชื่อผู้ใช้งาน</CustomFormLabel>
-          <CustomTextField id="name" variant="outlined" fullWidth value={form.name} onChange={handleChange} />
-          <CustomFormLabel htmlFor="email">Email Address</CustomFormLabel>
-          <CustomTextField id="email" variant="outlined" fullWidth value={form.email} onChange={handleChange} />
-          <CustomFormLabel htmlFor="password">Password</CustomFormLabel>
-          <CustomTextField id="password" type="password" variant="outlined" fullWidth value={form.password} onChange={handleChange} />
-          <CustomFormLabel htmlFor="roleId">Role</CustomFormLabel>
-          <Select
-            id="roleId"
-            value={form.roleId}
-            onChange={handleRoleChange}
-            fullWidth
-          >
-            {roles.map((role) => (
-              <MenuItem key={role.id} value={role.id}>
-                {role.name}
-              </MenuItem>
-            ))}
-          </Select>
-          
-          {!isAdmin && (
-            <>
-              <CustomFormLabel htmlFor="projects">Projects</CustomFormLabel>
-              <Paper style={{ maxHeight: 300, overflow: 'auto', marginBottom: 10 }}>
-                <CustomTextField
-                  fullWidth
-                  placeholder="Search projects..."
+      {!isAdmin && (
+        <div>
+          <div className="mes-label">โครงการที่เข้าถึงได้</div>
+          <div className="max-h-72 overflow-y-auto rounded-md border border-mes-border">
+            <div className="sticky top-0 border-b border-mes-border bg-mes-surface p-2">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-mes-muted"><Icon name="search" size={15} /></span>
+                <input
+                  className="mes-input !min-h-0 !py-2 !pl-9"
+                  placeholder="ค้นหาโครงการ…"
                   value={searchTerm}
                   onChange={handleSearch}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon />
-                      </InputAdornment>
-                    ),
-                  }}
                 />
-                <List>
-                  <ListItem>
-                    <ListItemIcon>
-                      <Checkbox
-                        edge="start"
-                        checked={form.projects.length === filteredProjects.length}
-                        indeterminate={form.projects.length > 0 && form.projects.length < filteredProjects.length}
-                        onChange={handleSelectAll}
-                      />
-                    </ListItemIcon>
-                    <ListItemText primary="Select All" />
-                  </ListItem>
-                  {filteredProjects.map((project) => (
-                    <ListItem key={project.id} dense button onClick={() => handleProjectChange(project.id)}>
-                      <ListItemIcon>
-                        <Checkbox
-                          edge="start"
-                          checked={form.projects.includes(project.id)}
-                          tabIndex={-1}
-                          disableRipple
-                        />
-                      </ListItemIcon>
-                      <ListItemText primary={project.name} />
-                    </ListItem>
-                  ))}
-                </List>
-              </Paper>
-            </>
-          )}
-        </Stack>
-        <Button color="primary" variant="contained" size="large" fullWidth type="submit">
-          Sign Up
-        </Button>
-        {error && <Typography color="error" mt={2}>{error}</Typography>}
-      </Box>
-      {subtitle}
-    </>
+              </div>
+            </div>
+            <label className="flex min-h-touch cursor-pointer items-center gap-3 border-b border-mes-border px-3 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-[var(--mes-accent)]"
+                checked={filteredProjects.length > 0 && form.projects.length === filteredProjects.length}
+                onChange={handleSelectAll}
+              />
+              เลือกทั้งหมด
+            </label>
+            {filteredProjects.map((project) => (
+              <label key={project.id} className="flex min-h-touch cursor-pointer items-center gap-3 px-3 text-sm hover:bg-mes-surface-2">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-[var(--mes-accent)]"
+                  checked={form.projects.includes(project.id)}
+                  onChange={() => handleProjectChange(project.id)}
+                />
+                <span className="min-w-0 truncate">{project.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button className="mes-btn mes-btn-primary w-full" type="submit">ลงทะเบียน</button>
+      {error && <div className="text-center text-xs text-sem-danger">{error}</div>}
+    </form>
   );
 };
 

@@ -1,86 +1,50 @@
-import React from 'react';
-import { Grid, Box, Typography } from '@mui/material';
-
-import Logo from 'src/layouts/full/shared/logo/Logo';
+// [MES] ForgotPassword — placeholder reset-password page (no backend flow yet,
+// matching the previous template stub). Rebuilt dark, Thai-first.
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import PageContainer from 'src/components/container/PageContainer';
+import { SfcMark, BrandWord } from 'src/layouts/mes/Logo';
 
-import img1 from 'src/assets/images/backgrounds/login-bg.svg';
+const ForgotPassword = () => {
+  const [email, setEmail] = useState('');
 
-import AuthForgotPassword from '../authForms/AuthForgotPassword';
-
-const ForgotPassword = () => (
-  <PageContainer title="Forgot Password" description="this is Forgot Password page">
-    <Grid container justifyContent="center" spacing={0} sx={{ overflowX: 'hidden' }}>
-      <Grid
-        item
-        xs={12}
-        sm={12}
-        lg={8}
-        xl={9}
-        sx={{
-          position: 'relative',
-          '&:before': {
-            content: '""',
-            background: 'radial-gradient(#d2f1df, #d3d7fa, #bad8f4)',
-            backgroundSize: '400% 400%',
-            animation: 'gradient 15s ease infinite',
-            position: 'absolute',
-            height: '100%',
-            width: '100%',
-            opacity: '0.3',
-          },
-        }}
-      >
-        <Box position="relative">
-          <Box px={3}>
-            <Logo />
-          </Box>
-          <Box
-            alignItems="center"
-            justifyContent="center"
-            height={'calc(100vh - 75px)'}
-            sx={{
-              display: {
-                xs: 'none',
-                lg: 'flex',
-              },
-            }}
-          >
-            <img
-              src={img1}
-              alt="bg"
-              style={{
-                width: '100%',
-                maxWidth: '500px',
-              }}
-            />
-          </Box>
-        </Box>
-      </Grid>
-      <Grid
-        item
-        xs={12}
-        sm={12}
-        lg={4}
-        xl={3}
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-      >
-        <Box p={4}>
-          <Typography variant="h4" fontWeight="700">
-            Forgot your password?
-          </Typography>
-
-          <Typography color="textSecondary" variant="subtitle2" fontWeight="400" mt={2}>
-            Please enter the email address associated with your account and We will email you a link
-            to reset your password.
-          </Typography>
-          <AuthForgotPassword />
-        </Box>
-      </Grid>
-    </Grid>
-  </PageContainer>
-);
+  return (
+    <PageContainer title="Forgot Password" description="this is Forgot Password page">
+      <div className="flex min-h-dvh items-center justify-center bg-mes-bg px-3 py-6">
+        <div className="w-full max-w-sm">
+          <div className="mb-4 flex items-center justify-center gap-3">
+            <SfcMark size={34} />
+            <BrandWord />
+          </div>
+          <div className="mes-card p-5">
+            <h1 className="text-lg font-bold">ลืมรหัสผ่าน?</h1>
+            <p className="mt-1 text-sm text-mes-muted">
+              กรุณากรอกอีเมลที่ผูกกับบัญชีของคุณ แล้วติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน
+            </p>
+            <div className="mt-4">
+              <label className="mes-label" htmlFor="fp-email">อีเมล</label>
+              <input
+                id="fp-email"
+                className="mes-input"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <a
+              className="mes-btn mes-btn-primary mt-3 w-full"
+              href={`mailto:?subject=ขอรีเซ็ตรหัสผ่าน SFC MES&body=อีเมลบัญชี: ${email}`}
+            >
+              ติดต่อผู้ดูแลระบบ
+            </a>
+            <Link to="/auth/login" className="mes-btn mes-btn-ghost mt-2 w-full">
+              กลับไปหน้าเข้าสู่ระบบ
+            </Link>
+          </div>
+        </div>
+      </div>
+    </PageContainer>
+  );
+};
 
 export default ForgotPassword;

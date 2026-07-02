@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+// [MES] AuthLogin — login form; auth flow identical to previous implementation.
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Button, Stack } from '@mui/material';
-import CustomTextField from '../../../components/forms/theme-elements/CustomTextField';
 import { useAuth } from '../../../contexts/AuthContext';
 import logo from 'src/assets/images/logos/logo-main.svg';
 
-const AuthLogin = ({ title, subtext, isSmallScreen }) => {
+const AuthLogin = () => {
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -17,7 +16,7 @@ const AuthLogin = ({ title, subtext, isSmallScreen }) => {
     e.preventDefault();
     setError('');
     if (!emailOrUsername.trim() || !password.trim()) {
-      setError('Both fields are required');
+      setError('กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน');
       return;
     }
     setIsLoading(true);
@@ -26,90 +25,50 @@ const AuthLogin = ({ title, subtext, isSmallScreen }) => {
       if (result.success) {
         navigate('/dashboards/modern');
       } else {
-        setError(result.error || 'Invalid credentials');
+        setError(result.error || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
       }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
-      console.error('Login error:', err);
+    } catch {
+      setError('เกิดข้อผิดพลาด กรุณาลองอีกครั้ง');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <Stack spacing={isSmallScreen ? 1 : 2} alignItems="center">
-        <Box sx={{ width: isSmallScreen ? '80px' : '120px', mb: isSmallScreen ? 0 : 1 }}>
-          <img src={logo} alt="Logo" style={{ width: '100%', height: 'auto' }} />
-        </Box>
+    <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4">
+      <img src={logo} alt="SFC" className="h-auto w-24" />
+      <div className="text-center">
+        <h1 className="text-lg font-bold tracking-wide">WELCOME TO SFC PC SYSTEM</h1>
+        <div className="text-xs text-mes-muted">SFC PRECAST SYSTEM</div>
+      </div>
 
-        {title && (
-          <Typography
-            fontWeight="700"
-            variant={isSmallScreen ? "h5" : "h3"}
-            sx={{
-              color: 'common.white',
-              textAlign: 'center',
-              letterSpacing: '0.05em',
-              lineHeight: 1.2,
-              textShadow: '1px 1px 4px rgba(0, 0, 0, 0.6)',
-              mb: isSmallScreen ? 0.5 : 1,
-            }}
-          >
-            {title}
-          </Typography>
-        )}
-
-        {!isSmallScreen && subtext}
-
-        <CustomTextField
-          placeholder="Email or Username"
-          fullWidth
+      <div className="w-full">
+        <label className="mes-label" htmlFor="login-user">อีเมลหรือชื่อผู้ใช้งาน</label>
+        <input
+          id="login-user"
+          className="mes-input"
+          autoComplete="username"
           value={emailOrUsername}
           onChange={(e) => setEmailOrUsername(e.target.value)}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              height: isSmallScreen ? '40px' : '50px',
-              fontSize: isSmallScreen ? '0.9rem' : '1rem',
-            },
-          }}
         />
-
-        <CustomTextField
+      </div>
+      <div className="w-full">
+        <label className="mes-label" htmlFor="login-pass">รหัสผ่าน</label>
+        <input
+          id="login-pass"
+          className="mes-input"
           type="password"
-          placeholder="Password"
-          fullWidth
+          autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              height: isSmallScreen ? '40px' : '50px',
-              fontSize: isSmallScreen ? '0.9rem' : '1rem',
-            },
-          }}
         />
+      </div>
 
-        {error && (
-          <Typography color="error" fontSize={isSmallScreen ? '0.7rem' : '0.9rem'} textAlign="center">
-            {error}
-          </Typography>
-        )}
+      {error && <div className="w-full text-center text-xs text-sem-danger">{error}</div>}
 
-        <Button
-          variant="contained"
-          fullWidth
-          type="submit"
-          disabled={isLoading}
-          sx={{
-            mt: isSmallScreen ? 1 : 2,
-            height: isSmallScreen ? '36px' : '50px',
-            fontSize: isSmallScreen ? '0.9rem' : '1rem',
-            textTransform: 'none',
-          }}
-        >
-          {isLoading ? 'Signing In...' : 'Sign In'}
-        </Button>
-      </Stack>
+      <button className="mes-btn mes-btn-primary w-full" type="submit" disabled={isLoading}>
+        {isLoading ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ'}
+      </button>
     </form>
   );
 };
