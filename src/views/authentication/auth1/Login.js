@@ -3,11 +3,12 @@
 // Desktop fine-pointer: lazy GSAP cinematic layer (useLandingCinematics) —
 // intro timeline, scroll reveals, custom cursor, magnetic button.
 // Auth flow (AuthLogin + AuthContext) is untouched — UI shell only.
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from 'src/contexts/AuthContext';
 import PageContainer from 'src/components/container/PageContainer';
 import { COMPONENT_STATUS } from 'src/components/mes/status-meta';
+import { fetchProjects } from 'src/utils/api';
 import AuthLogin from './AuthLogin';
 import useLandingCinematics from './useLandingCinematics';
 import videoBg from 'src/assets/videos/Slow_cinematic_dolly_shot_in.mp4';
@@ -56,11 +57,33 @@ const CHAPTERS = [
   },
 ];
 
+const thNumber = new Intl.NumberFormat('th-TH');
+
 const Login = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const rootRef = useRef(null);
   const { active, settled } = useLandingCinematics(rootRef);
+  // Live numbers from the same public endpoint the dashboard uses — the
+  // "เรียลไทม์" chapter proves itself. Stays null (block not rendered) on
+  // failure or empty data; fetchProjects never throws.
+  const [liveStats, setLiveStats] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchProjects().then((res) => {
+      const projects = Array.isArray(res?.data) ? res.data : [];
+      if (!mounted || projects.length === 0) return;
+      const components = projects.reduce(
+        (sum, p) => sum + (parseInt(p.components, 10) || 0),
+        0,
+      );
+      setLiveStats({ projects: projects.length, components });
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -238,6 +261,32 @@ const Login = () => {
                   </div>
                   <h2 className="mt-2 text-xl font-bold sm:text-2xl">{chapter.title}</h2>
                   <p className="mt-2 text-sm text-mes-muted sm:text-base">{chapter.body}</p>
+                  {chapter.no === '01' && liveStats && (
+                    <div className="mt-6">
+                      <p className="flex items-center gap-2 font-mono text-xs text-mes-muted">
+                        <span className="h-1.5 w-1.5 rounded-full bg-brand-gold" aria-hidden />
+                        ข้อมูลจริงจากระบบ
+                      </p>
+                      <div className="mt-3 flex gap-10">
+                        <div>
+                          <div className="text-4xl font-normal tabular-nums sm:text-5xl">
+                            {thNumber.format(liveStats.projects)}
+                          </div>
+                          <div className="mt-2 font-mono text-xs text-mes-muted">
+                            โครงการที่ติดตามอยู่
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-4xl font-normal tabular-nums sm:text-5xl">
+                            {thNumber.format(liveStats.components)}
+                          </div>
+                          <div className="mt-2 font-mono text-xs text-mes-muted">
+                            ชิ้นงานในระบบ
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {chapter.cta && (
                     <Link
                       to={chapter.cta.to}
