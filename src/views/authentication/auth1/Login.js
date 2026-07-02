@@ -12,6 +12,7 @@ import AuthLogin from './AuthLogin';
 import useLandingCinematics from './useLandingCinematics';
 import videoBg from 'src/assets/videos/Slow_cinematic_dolly_shot_in.mp4';
 import videoPoster from 'src/assets/images/hero-poster.jpg';
+import heroBgStatic from 'src/assets/images/hero-bg-static.jpg';
 
 // Lifecycle stages shown on the landing strip (workflow order, no rejected).
 // Labels come from status-meta (ADR-0006 rule 4); rendered in brand gold/muted
@@ -64,6 +65,20 @@ const Login = () => {
   return (
     <PageContainer title="เข้าสู่ระบบ — SFC MES" description="SFC Precast MES — landing and login">
       <div ref={rootRef} className={`mes-landing relative min-h-dvh bg-mes-bg${cineClass}`}>
+        {/* Static hero image for every non-cinematic context (phones, tablets,
+            reduced-motion, GSAP failure) — 103KB, CSS-only, same scene as the video. */}
+        {!active && (
+          <>
+            <img
+              src={heroBgStatic}
+              alt=""
+              aria-hidden
+              className="fixed inset-0 h-full w-full object-cover opacity-25"
+            />
+            <div className="fixed inset-0 bg-brand-navy opacity-50" />
+          </>
+        )}
+
         {/* Cinematic-only background: video never loads on mobile/reduced-motion.
             Video starts invisible — GSAP fades it to its barely-there level, a
             vignette pushes the edges into the page bg, and the veil dims the whole
@@ -80,7 +95,7 @@ const Login = () => {
               playsInline
               className="fixed inset-0 h-full w-full object-cover opacity-0"
             />
-            <div className="fixed inset-0 bg-brand-navy opacity-50" />
+            <div className="fixed inset-0 bg-brand-navy opacity-40" />
             <div className="mes-hero-vignette fixed inset-0" aria-hidden />
             <div data-video-veil className="fixed inset-0 bg-mes-bg opacity-0" aria-hidden />
             <div

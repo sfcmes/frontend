@@ -201,8 +201,8 @@
     .mes-cinematic { cursor: none; }
     /* Pushes the video's edges into the page bg so it reads as depth, not wallpaper */
     .mes-hero-vignette {
-      background: radial-gradient(120% 90% at 30% 18%, transparent 0%, var(--mes-bg) 82%);
-      opacity: 0.9;
+      background: radial-gradient(140% 110% at 35% 20%, transparent 45%, var(--mes-bg) 96%);
+      opacity: 0.6;
     }
     .mes-cinematic [data-login-panel] { cursor: auto; }
     /* opacity-only pre-hide: GSAP sets transforms itself before revealing */
