@@ -29,6 +29,14 @@ const HERO_LINES = [
   [{ text: 'สู่' }, { text: 'หน้างาน', dot: true }],
 ];
 
+// Company facts sourced from company-profile.pdf (repo root) — do not invent numbers.
+const COMPANY_STATS = [
+  { value: '2512', label: 'ก่อตั้งแสงฟ้าก่อสร้าง' },
+  { value: '2552', label: 'เปิดโรงงานพรีคาสท์' },
+  { value: '350', unit: 'ตร.ม./วัน', label: 'กำลังการผลิตสูงสุด' },
+  { value: '380', unit: 'KSC', label: 'กำลังอัดคอนกรีต' },
+];
+
 const CHAPTERS = [
   {
     no: '01',
@@ -95,7 +103,7 @@ const Login = () => {
               playsInline
               className="fixed inset-0 h-full w-full object-cover opacity-0"
             />
-            <div className="fixed inset-0 bg-brand-navy opacity-40" />
+            <div className="fixed inset-0 bg-brand-navy opacity-20" />
             <div className="mes-hero-vignette fixed inset-0" aria-hidden />
             <div data-video-veil className="fixed inset-0 bg-mes-bg opacity-0" aria-hidden />
             <div
@@ -144,6 +152,46 @@ const Login = () => {
             >
               <div className="mes-fill-surface-80 rounded-lg border border-mes-border p-6 shadow-overlay backdrop-blur-md">
                 <AuthLogin />
+              </div>
+
+              {/* Company profile — fills the desktop right column below the card;
+                  travels inside the sticky wrapper so it never collides with it.
+                  Facts from company-profile.pdf. Desktop-only: mobile keeps the
+                  login card tight above the story. */}
+              <div className="mt-8 hidden lg:block">
+                <p className="font-mono text-xs tracking-[0.3em] text-mes-muted">
+                  SFC PRECAST CO., LTD.
+                </p>
+                <p className="mt-3 text-sm leading-relaxed text-mes-muted">
+                  โรงงานผลิตชิ้นส่วนคอนกรีตสำเร็จรูปในเครือแสงฟ้าก่อสร้าง — ดำเนินธุรกิจด้วยความ
+                  «มุ่งมั่น และ ซื่อสัตย์» มาตั้งแต่ปี 2512
+                </p>
+                <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-6">
+                  {COMPANY_STATS.map((stat) => (
+                    <div key={stat.label} className="border-t border-mes-border pt-3">
+                      <dt className="font-mono text-xs text-mes-muted">{stat.label}</dt>
+                      <dd className="mt-1 text-2xl font-bold">
+                        {stat.value}
+                        {stat.unit && (
+                          <span className="ml-1 text-sm font-normal text-mes-muted">
+                            {stat.unit}
+                          </span>
+                        )}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                <a
+                  href="https://www.sangfahpc.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-6 inline-flex items-center gap-2 font-mono text-xs tracking-[0.2em] text-mes-muted transition-colors hover:text-brand-gold"
+                >
+                  WWW.SANGFAHPC.COM
+                  <span className="text-brand-gold" aria-hidden>
+                    →
+                  </span>
+                </a>
               </div>
             </div>
           </aside>
