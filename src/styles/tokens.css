@@ -1,0 +1,199 @@
+/* [MES] tokens.css — THE single source of every color in the codebase.
+   No hex value may exist in any other file. See TOKEN.md for rationale
+   and computed WCAG contrast ratios. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand (locked) */
+  --brand-navy: #0D1B3E;
+  --brand-gold: #F5A800;
+  --brand-red: #CC2229;
+
+  /* MES UI */
+  --mes-bg: #0A0F1E;
+  --mes-surface: #111A33;
+  --mes-surface-2: #1A2547;
+  --mes-text: #E9EEF8;
+  --mes-text-muted: #96A2BB;
+  --mes-border: #263352;
+  --mes-accent: #F5A800;
+  --mes-accent-ink: #0A0F1E;
+
+  /* Component workflow statuses (canonical 6 — CONTEXT.md) */
+  --status-planning: #9DAAC2;
+  --status-manufactured: #41CD7A;
+  --status-transported: #FF9E57;
+  --status-accepted: #B79CFF;
+  --status-installed: #3AD6CA;
+  --status-rejected: #FF6B5E;
+
+  /* PO workflow statuses */
+  --status-po-draft: #93A0B4;
+  --status-po-submitted: #FFC24B;
+  --status-po-ordered: #6FA8FF;
+  --status-po-received: #41CD7A;
+
+  /* Printable QR artifacts (scanners need pure black-on-white; canvas APIs
+     read these via getComputedStyle since they cannot resolve var()) */
+  --qr-ink: #000000;
+  --qr-paper: #FFFFFF;
+
+  /* Semantic (section/project enums, toasts, errors) */
+  --sem-info: #6FA8FF;
+  --sem-success: #41CD7A;
+  --sem-warn: #FFC24B;
+  --sem-neutral: #93A0B4;
+  --sem-danger: #FF6B5E;
+
+  /* Typography */
+  --font-sans: 'IBM Plex Sans Thai', 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Shape */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* Elevation (overlays only — surfaces elevate via surface steps + border) */
+  --shadow-overlay: 0 16px 48px rgba(4, 8, 20, 0.6);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+  body {
+    background: var(--mes-bg);
+    color: var(--mes-text);
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Thai stacked diacritics need generous line height everywhere */
+  p, td, th, li, label, input, select, textarea, button {
+    line-height: 1.55;
+  }
+  /* 16px input floor prevents iOS auto-zoom */
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
+@layer components {
+  .mes-card {
+    background: var(--mes-surface);
+    border: 1px solid var(--mes-border);
+    border-radius: var(--radius-md);
+  }
+  .mes-input {
+    width: 100%;
+    background: var(--mes-bg);
+    border: 1px solid var(--mes-border);
+    border-radius: var(--radius-sm);
+    color: var(--mes-text);
+    padding: 10px 12px;
+    min-height: 48px;
+  }
+  .mes-input:focus {
+    outline: 2px solid var(--mes-accent);
+    outline-offset: -1px;
+  }
+  .mes-input::placeholder {
+    color: var(--mes-text-muted);
+    opacity: 0.7;
+  }
+  .mes-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mes-text-muted);
+    margin-bottom: 6px;
+  }
+  .mes-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 18px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 14px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: filter 0.12s;
+  }
+  .mes-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .mes-btn:not(:disabled):hover { filter: brightness(1.1); }
+  .mes-btn-primary {
+    background: var(--mes-accent);
+    color: var(--mes-accent-ink);
+  }
+  .mes-btn-ghost {
+    background: transparent;
+    border-color: var(--mes-border);
+    color: var(--mes-text);
+  }
+  .mes-btn-danger {
+    background: transparent;
+    border-color: var(--sem-danger);
+    color: var(--sem-danger);
+  }
+  @media (min-width: 768px) {
+    .mes-btn { min-height: 40px; }
+    .mes-input { min-height: 42px; font-size: 14px; }
+  }
+  .mes-th {
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--mes-text-muted);
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--mes-border);
+    white-space: nowrap;
+  }
+  .mes-td {
+    padding: 10px 12px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--mes-border);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* [MES] Landing (/auth/login) — motion layers.
+     Mobile/tablet: CSS-only entrance + focus micro-interactions (motion-safe).
+     Desktop fine-pointer: GSAP owns motion; CSS only pre-hides intro targets
+     (.mes-cine-prehide, removed on timeline completion or GSAP load failure). */
+  @keyframes mes-rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: no-preference) and (max-width: 1023px) {
+    .mes-landing-rise {
+      animation: mes-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-delay: var(--rise-delay, 0s);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .mes-landing .mes-input {
+      background-image: linear-gradient(var(--mes-accent), var(--mes-accent));
+      background-repeat: no-repeat;
+      background-position: bottom left;
+      background-size: 0 2px;
+      transition: background-size 0.25s ease;
+    }
+    .mes-landing .mes-input:focus { background-size: 100% 2px; }
+    .mes-landing .mes-btn-primary:not(:disabled) { transition: filter 0.12s, transform 0.12s; }
+    .mes-landing .mes-btn-primary:not(:disabled):active { transform: scale(0.97); }
+  }
+  @media (pointer: fine) and (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+    .mes-cinematic { cursor: none; }
+    .mes-cinematic [data-login-panel] { cursor: auto; }
+    /* opacity-only pre-hide: GSAP sets transforms itself before revealing */
+    .mes-cine-prehide [data-hero-line],
+    .mes-cine-prehide [data-pipe-stage],
+    .mes-cine-prehide [data-pipe-track],
+    .mes-cine-prehide [data-hero-sub],
+    .mes-cine-prehide [data-login-panel] { opacity: 0; }
+  }
+}

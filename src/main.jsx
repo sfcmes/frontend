@@ -1,19 +1,20 @@
-import React, { Suspense } from 'react';
+// [MES] Entry point. Redux, mock APIs, and i18n were removed with the template
+// pages (ADR-0005) — the MES app uses local state + AuthContext only.
+import { Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
-import { store } from './store/Store';
-import Spinner from './views/spinner/Spinner';
-import './_mockApis';
-import './utils/i18n';
+import '@fontsource/ibm-plex-sans-thai/400.css';
+import '@fontsource/ibm-plex-sans-thai/500.css';
+import '@fontsource/ibm-plex-sans-thai/600.css';
+import '@fontsource/ibm-plex-sans-thai/700.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import './styles/tokens.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <Provider store={store}>
-    <Suspense fallback={<Spinner />}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </Suspense>
-  </Provider>,
-)
+  <Suspense>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </Suspense>,
+);

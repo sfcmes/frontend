@@ -1,26 +1,17 @@
+// [MES] App — root component. Dark-only token theme (tokens.css); no MUI theme,
+// no user theming (ADR-0005/0006).
 import { useRoutes } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { ThemeSettings } from './theme/Theme';
-import RTL from './layouts/full/shared/customizer/RTL';
 import ScrollToTop from './components/shared/ScrollToTop';
 import Router from './routes/Router';
-import { CssBaseline, ThemeProvider } from '@mui/material';
-import { AuthProvider } from './contexts/AuthContext'; // Import AuthProvider
+import { AuthProvider } from './contexts/AuthContext';
 
 function App() {
   const routing = useRoutes(Router);
-  const theme = ThemeSettings();
-  const customizer = useSelector((state) => state.customizer);
 
   return (
-    <ThemeProvider theme={theme}>
-      <RTL direction={customizer.activeDir}>
-        <CssBaseline />
-        <AuthProvider> {/* Wrap the routing with AuthProvider */}
-          <ScrollToTop>{routing}</ScrollToTop>
-        </AuthProvider>
-      </RTL>
-    </ThemeProvider>
+    <AuthProvider>
+      <ScrollToTop>{routing}</ScrollToTop>
+    </AuthProvider>
   );
 }
 
