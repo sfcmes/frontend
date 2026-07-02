@@ -44,28 +44,33 @@ export default function useLandingCinematics(rootRef) {
 
         ctx = gsap.context(() => {
           const lines = gsap.utils.toArray('[data-hero-line]');
+          const words = gsap.utils.toArray('[data-hero-word]');
           const stages = gsap.utils.toArray('[data-pipe-stage]');
           const sub = root.querySelector('[data-hero-sub]');
           const track = root.querySelector('[data-pipe-track]');
           const panel = root.querySelector('[data-login-panel]');
+          const hero = root.querySelector('[data-hero]');
 
-          // Position intro targets while the CSS pre-hide keeps them at opacity 0.
-          gsap.set(lines, { yPercent: 110 });
+          // Words launch from below the line masks with their own mass. The lines
+          // just become visible (inline style overrides the CSS pre-hide) — the
+          // masks stay put, only the words move.
+          gsap.set(words, { yPercent: 120, rotate: 5, transformOrigin: '0% 100%' });
+          gsap.set(lines, { opacity: 1 });
           gsap.set(stages, { y: 14 });
-          if (sub) gsap.set(sub, { y: 16 });
+          if (sub) gsap.set(sub, { y: 24 });
           if (panel) gsap.set(panel, { x: 40 });
 
           const tl = gsap.timeline({
-            defaults: { ease: 'power3.out' },
+            defaults: { ease: 'power4.out' },
             onComplete: () => {
               if (!settledRef.current) markSettled();
             },
           });
-          tl.to(lines, { yPercent: 0, opacity: 1, duration: 0.9, stagger: 0.12 })
-            .to(sub, { y: 0, opacity: 1, duration: 0.6 }, '-=0.55')
-            .to(stages, { y: 0, opacity: 1, duration: 0.5, stagger: 0.07 }, '-=0.45')
-            .to(track, { opacity: 1, duration: 0.4 }, '<')
-            .to(panel, { x: 0, opacity: 1, duration: 0.7 }, '-=0.55');
+          tl.to(words, { yPercent: 0, rotate: 0, duration: 1.2, stagger: 0.09 })
+            .to(sub, { y: 0, opacity: 1, duration: 0.9 }, '-=0.85')
+            .to(stages, { y: 0, opacity: 1, duration: 0.7, stagger: 0.06 }, '-=0.75')
+            .to(track, { opacity: 1, duration: 0.5 }, '<')
+            .to(panel, { x: 0, opacity: 1, duration: 1 }, '-=0.8');
 
           // Intro is skippable: first scroll jumps it to its end state.
           const skipIntro = () => tl.progress(1);
@@ -76,39 +81,80 @@ export default function useLandingCinematics(rootRef) {
             window.removeEventListener('touchmove', skipIntro);
           });
 
-          // Scroll-linked reveals: chapters rise as they enter the viewport.
-          gsap.utils.toArray('[data-chapter]').forEach((el) => {
-            gsap.from(el, {
-              opacity: 0,
-              y: 40,
-              duration: 0.7,
-              ease: 'power3.out',
-              scrollTrigger: { trigger: el, start: 'top 82%' },
+          // Hero hands off as the story scrolls in — scrubbed, reversible,
+          // so the sections breathe into each other instead of stacking.
+          if (hero) {
+            gsap.to(hero, {
+              yPercent: -10,
+              opacity: 0.3,
+              ease: 'none',
+              scrollTrigger: { trigger: root, start: 'top top', end: '+=480', scrub: 0.5 },
             });
+          }
+
+          // Chapter reveals scrub with scroll position (not trigger-once):
+          // body rises while its gold rule draws in, both reverse on scroll-back.
+          gsap.utils.toArray('[data-chapter]').forEach((el) => {
+            const rule = el.querySelector('[data-chapter-rule]');
+            const ct = gsap.timeline({
+              defaults: { ease: 'none' },
+              // clamp() keeps the scrub range inside the scrollable area so
+              // chapters near the page bottom still reach their end state.
+              scrollTrigger: { trigger: el, start: 'clamp(top 96%)', end: 'clamp(top 58%)', scrub: 0.6 },
+            });
+            ct.fromTo(el, { opacity: 0, y: 64 }, { opacity: 1, y: 0 });
+            if (rule) {
+              ct.fromTo(rule, { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1 }, 0.15);
+            }
           });
 
-          // Gold pipeline progress line scrubs with the story scroll.
+          // Gold pipeline progress line scrubs with the story scroll and lights
+          // each stage as it passes it (is-lit styles live in tokens.css).
           const story = root.querySelector('[data-story]');
           const progress = root.querySelector('[data-pipe-progress]');
           if (story && progress) {
+            const lastIndex = Math.max(stages.length - 1, 1);
             gsap.fromTo(
               progress,
               { scaleX: 0 },
               {
                 scaleX: 1,
                 ease: 'none',
-                scrollTrigger: { trigger: story, start: 'top 75%', end: 'bottom bottom', scrub: true },
+                scrollTrigger: {
+                  trigger: story,
+                  start: 'top 75%',
+                  end: 'bottom bottom',
+                  scrub: true,
+                  onUpdate: (self) => {
+                    stages.forEach((stage, i) => {
+                      stage.classList.toggle('is-lit', self.progress >= i / lastIndex - 0.001);
+                    });
+                  },
+                },
               },
             );
+            teardowns.push(() => stages.forEach((stage) => stage.classList.remove('is-lit')));
           }
 
-          // Subtle video parallax over the full page scroll.
+          // Video: fade in to barely-visible (never pops), slow parallax scale,
+          // and a veil that dims the whole layer as the story takes over.
           const video = root.querySelector('[data-hero-video]');
           if (video) {
+            gsap.to(video, { opacity: 0.16, duration: 1.8, ease: 'power2.inOut' });
             gsap.to(video, {
               scale: 1.08,
               ease: 'none',
               scrollTrigger: { trigger: root, start: 'top top', end: 'bottom top', scrub: true },
+            });
+          }
+          const veil = root.querySelector('[data-video-veil]');
+          if (veil && story) {
+            gsap.to(veil, {
+              opacity: 0.55,
+              ease: 'none',
+              // Starts below the resting viewport so the hero video is undimmed
+              // until the user actually scrolls into the story.
+              scrollTrigger: { trigger: story, start: 'top 45%', end: 'clamp(top 8%)', scrub: 0.5 },
             });
           }
 

@@ -19,6 +19,14 @@ const STAGES = ['planning', 'manufactured', 'transported', 'accepted', 'installe
   (key) => COMPONENT_STATUS[key],
 );
 
+// Hero headline pre-split into Thai words (no runtime segmentation) so the
+// cinematic layer can give each word its own mass. Rest state renders
+// identically to plain text — spans are inline-block with no styling of their own.
+const HERO_LINES = [
+  [{ text: 'จาก' }, { text: 'แบบหล่อ' }],
+  [{ text: 'สู่' }, { text: 'หน้างาน', dot: true }],
+];
+
 const CHAPTERS = [
   {
     no: '01',
@@ -55,7 +63,10 @@ const Login = () => {
   return (
     <PageContainer title="เข้าสู่ระบบ — SFC MES" description="SFC Precast MES — landing and login">
       <div ref={rootRef} className={`mes-landing relative min-h-dvh bg-mes-bg${cineClass}`}>
-        {/* Cinematic-only background: video never loads on mobile/reduced-motion */}
+        {/* Cinematic-only background: video never loads on mobile/reduced-motion.
+            Video starts invisible — GSAP fades it to its barely-there level, a
+            vignette pushes the edges into the page bg, and the veil dims the whole
+            layer as the story scrolls in. */}
         {active && (
           <>
             <video
@@ -65,9 +76,11 @@ const Login = () => {
               muted
               loop
               playsInline
-              className="fixed inset-0 h-full w-full object-cover opacity-25"
+              className="fixed inset-0 h-full w-full object-cover opacity-0"
             />
-            <div className="fixed inset-0 bg-brand-navy/70" />
+            <div className="fixed inset-0 bg-brand-navy opacity-70" />
+            <div className="mes-hero-vignette fixed inset-0" aria-hidden />
+            <div data-video-veil className="fixed inset-0 bg-mes-bg opacity-0" aria-hidden />
             <div
               data-mes-cursor
               className="pointer-events-none fixed left-0 top-0 z-50 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-gold opacity-0"
@@ -76,24 +89,31 @@ const Login = () => {
         )}
 
         <div className="relative z-10 mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 px-5 pb-16 pt-10 sm:px-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-x-20 lg:gap-y-14 lg:pt-24">
-          {/* Hero — mobile position 1 / desktop left column */}
-          <header className="mes-landing-rise">
+          {/* Hero — mobile position 1 / desktop left column.
+              Each line is an overflow mask; words rise inside it individually. */}
+          <header data-hero className="mes-landing-rise">
             <p className="font-mono text-xs tracking-[0.3em] text-mes-muted">
               SFC PRECAST <span className="text-brand-gold">—</span> MES
             </p>
-            <h1 className="mt-5 text-4xl font-bold leading-[1.3] sm:text-5xl xl:text-6xl">
-              <span className="block overflow-hidden">
-                <span data-hero-line className="block">
-                  จากแบบหล่อ
+            <h1 className="mt-6 text-5xl font-bold leading-[1.3] sm:text-6xl xl:text-7xl">
+              {HERO_LINES.map((words, li) => (
+                <span key={li} className="block overflow-hidden">
+                  <span data-hero-line className="block">
+                    {words.map((word) => (
+                      <span key={word.text} data-hero-word className="inline-block">
+                        {word.text}
+                        {word.dot && (
+                          <span className="text-brand-gold" aria-hidden>
+                            .
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                  </span>
                 </span>
-              </span>
-              <span className="block overflow-hidden">
-                <span data-hero-line className="block">
-                  สู่หน้างาน<span className="text-brand-gold">.</span>
-                </span>
-              </span>
+              ))}
             </h1>
-            <p data-hero-sub className="mt-4 max-w-xl text-sm text-mes-muted sm:text-base">
+            <p data-hero-sub className="mt-6 max-w-xl text-sm text-mes-muted sm:text-base">
               ระบบติดตามการผลิต ขนส่ง และติดตั้งชิ้นส่วนคอนกรีตสำเร็จรูป — ทุกสถานะ ทุกชิ้นงาน
               ในที่เดียว
             </p>
@@ -105,7 +125,7 @@ const Login = () => {
               data-login-panel
               className="mes-landing-rise lg:sticky lg:top-24 [--rise-delay:0.1s]"
             >
-              <div className="rounded-lg border border-mes-border bg-mes-surface/80 p-6 shadow-overlay backdrop-blur-md">
+              <div className="mes-fill-surface-80 rounded-lg border border-mes-border p-6 shadow-overlay backdrop-blur-md">
                 <AuthLogin />
               </div>
             </div>
@@ -125,7 +145,7 @@ const Login = () => {
                     }`}
                   >
                     <div
-                      className={`font-mono text-xs ${
+                      className={`mes-stage-no font-mono text-xs ${
                         i === 0 ? 'text-brand-gold' : 'text-mes-muted'
                       }`}
                     >
@@ -143,10 +163,11 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Chapters */}
-            <div className="mt-14 flex flex-col gap-12 lg:mt-20 lg:gap-16">
+            {/* Chapters — desktop reveals scrub with scroll; gold rule draws in */}
+            <div className="mt-14 flex flex-col gap-12 lg:mt-24 lg:gap-24">
               {CHAPTERS.map((chapter) => (
                 <article key={chapter.no} data-chapter className="max-w-xl">
+                  <div data-chapter-rule className="mb-5 h-px w-16 bg-brand-gold opacity-70" aria-hidden />
                   <div className="font-mono text-xs tracking-[0.3em] text-brand-gold">
                     {chapter.no}
                   </div>
@@ -168,7 +189,7 @@ const Login = () => {
               ))}
             </div>
 
-            <footer className="mt-16 border-t border-mes-border pt-5 font-mono text-xs text-mes-muted lg:mt-20">
+            <footer className="mt-16 border-t border-mes-border pt-5 font-mono text-xs text-mes-muted lg:mt-28">
               SFC PRECAST — ระบบภายในสำหรับทีมผลิตและหน้างาน
             </footer>
           </section>

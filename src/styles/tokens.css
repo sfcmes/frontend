@@ -186,8 +186,24 @@
     .mes-landing .mes-btn-primary:not(:disabled) { transition: filter 0.12s, transform 0.12s; }
     .mes-landing .mes-btn-primary:not(:disabled):active { transform: scale(0.97); }
   }
+  /* Translucent fill for var() tokens — Tailwind's /NN alpha modifiers silently
+     generate nothing for colors defined as raw var(), so alpha lives here. */
+  .mes-fill-surface-80 { background-color: color-mix(in srgb, var(--mes-surface) 80%, transparent); }
+
+  /* Pipeline stages light up as the scrubbed progress line passes them
+     (class toggled by the GSAP layer; base state comes from Tailwind classes) */
+  .mes-landing [data-pipe-stage] { transition: border-color 0.5s ease; }
+  .mes-landing .mes-stage-no { transition: color 0.5s ease; }
+  .mes-landing [data-pipe-stage].is-lit { border-top-color: var(--brand-gold); }
+  .mes-landing [data-pipe-stage].is-lit .mes-stage-no { color: var(--brand-gold); }
+
   @media (pointer: fine) and (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
     .mes-cinematic { cursor: none; }
+    /* Pushes the video's edges into the page bg so it reads as depth, not wallpaper */
+    .mes-hero-vignette {
+      background: radial-gradient(120% 90% at 30% 18%, transparent 0%, var(--mes-bg) 82%);
+      opacity: 0.9;
+    }
     .mes-cinematic [data-login-panel] { cursor: auto; }
     /* opacity-only pre-hide: GSAP sets transforms itself before revealing */
     .mes-cine-prehide [data-hero-line],
