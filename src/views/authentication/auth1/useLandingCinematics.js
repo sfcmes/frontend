@@ -180,13 +180,15 @@ export default function useLandingCinematics(rootRef, contentReady = true) {
               xTo(e.clientX);
               yTo(e.clientY);
             };
+            // overwrite:'auto' — skimming element boundaries fires these in quick
+            // succession; without it competing tweens stack and the dot flickers.
             const onOver = (e) => {
               if (e.target.closest('[data-login-panel]')) {
-                gsap.to(dot, { scale: 0, opacity: 0, duration: 0.2 });
+                gsap.to(dot, { scale: 0, opacity: 0, duration: 0.3, overwrite: 'auto' });
               } else if (e.target.closest('a, button')) {
-                gsap.to(dot, { scale: 2.4, opacity: 0.9, duration: 0.25 });
+                gsap.to(dot, { scale: 2.4, opacity: 0.9, duration: 0.35, overwrite: 'auto' });
               } else {
-                gsap.to(dot, { scale: 1, opacity: 1, duration: 0.25 });
+                gsap.to(dot, { scale: 1, opacity: 1, duration: 0.35, overwrite: 'auto' });
               }
             };
             window.addEventListener('mousemove', onMove, { passive: true });
@@ -197,20 +199,25 @@ export default function useLandingCinematics(rootRef, contentReady = true) {
             });
           }
 
-          // Magnetic pull on the login submit button and any [data-magnetic] element.
+          // Magnetic pull on the login submit button and any [data-magnetic]
+          // element (small buttons only — never large cards). Pull is clamped
+          // to ±12px and the return has NO elastic overshoot: an overshooting
+          // element re-enters the resting cursor at the hover boundary and
+          // flickers enter/leave forever.
           const magnets = gsap.utils.toArray(
             '[data-magnetic], [data-login-panel] button[type="submit"]',
           );
+          const clampPull = gsap.utils.clamp(-12, 12);
           magnets.forEach((el) => {
-            const pullX = gsap.quickTo(el, 'x', { duration: 0.3, ease: 'power3.out' });
-            const pullY = gsap.quickTo(el, 'y', { duration: 0.3, ease: 'power3.out' });
+            const pullX = gsap.quickTo(el, 'x', { duration: 0.4, ease: 'power3.out' });
+            const pullY = gsap.quickTo(el, 'y', { duration: 0.4, ease: 'power3.out' });
             const onMagnetMove = (e) => {
               const r = el.getBoundingClientRect();
-              pullX((e.clientX - (r.left + r.width / 2)) * 0.3);
-              pullY((e.clientY - (r.top + r.height / 2)) * 0.3);
+              pullX(clampPull((e.clientX - (r.left + r.width / 2)) * 0.15));
+              pullY(clampPull((e.clientY - (r.top + r.height / 2)) * 0.15));
             };
             const onMagnetLeave = () => {
-              gsap.to(el, { x: 0, y: 0, duration: 0.5, ease: 'elastic.out(1, 0.45)' });
+              gsap.to(el, { x: 0, y: 0, duration: 0.6, ease: 'power3.out' });
             };
             el.addEventListener('mousemove', onMagnetMove, { passive: true });
             el.addEventListener('mouseleave', onMagnetLeave);

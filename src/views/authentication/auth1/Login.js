@@ -71,13 +71,12 @@ const ProfileBookCard = ({ className = '' }) => (
     href="https://sfcmes.github.io/sangfahpc.com/"
     target="_blank"
     rel="noreferrer"
-    data-magnetic
-    className={`group flex items-center gap-4 rounded-lg border border-mes-border bg-mes-surface p-4 transition-colors hover:border-brand-gold ${className}`}
+    className={`group flex items-center gap-4 rounded-lg border border-mes-border bg-mes-surface p-4 transition-colors duration-500 hover:border-brand-gold ${className}`}
   >
     <img
       src={profileCover}
       alt="ปก Company Profile — SFC Precast"
-      className="w-14 shrink-0 -rotate-3 rounded-sm shadow-overlay transition-transform duration-300 motion-safe:group-hover:rotate-0 motion-safe:group-hover:scale-105"
+      className="w-14 shrink-0 -rotate-3 rounded-sm shadow-overlay transition-transform duration-500 ease-out motion-safe:group-hover:rotate-0 motion-safe:group-hover:scale-105"
     />
     <span className="min-w-0 flex-1">
       <span className="block font-mono text-[10px] tracking-[0.25em] text-mes-muted">
@@ -88,7 +87,7 @@ const ProfileBookCard = ({ className = '' }) => (
         เปิดอ่านฉบับเต็ม{' '}
         <span
           aria-hidden
-          className="inline-block transition-transform duration-300 motion-safe:group-hover:translate-x-1"
+          className="inline-block transition-transform duration-500 ease-out motion-safe:group-hover:translate-x-1"
         >
           →
         </span>
@@ -503,16 +502,15 @@ const Login = () => {
               <Link
                 to="/dashboards/modern"
                 data-perf-card
-                data-magnetic
                 className="group flex min-h-[190px] rounded-lg bg-brand-gold text-brand-navy"
               >
-                <span className="flex flex-1 flex-col justify-between p-6 transition-transform duration-300 motion-safe:group-hover:-translate-y-1">
+                <span className="flex flex-1 flex-col justify-between p-6 transition-transform duration-500 ease-out motion-safe:group-hover:-translate-y-1">
                   <span className="font-mono text-xs">เปิดดูได้ ไม่ต้องเข้าสู่ระบบ</span>
                   <span className="text-lg font-bold">
                     เปิดแดชบอร์ดสาธารณะ{' '}
                     <span
                       aria-hidden
-                      className="inline-block transition-transform duration-300 motion-safe:group-hover:translate-x-1"
+                      className="inline-block transition-transform duration-500 ease-out motion-safe:group-hover:translate-x-1"
                     >
                       →
                     </span>

@@ -195,6 +195,8 @@
   .mes-landing [data-login-panel] {
     scrollbar-width: thin;
     scrollbar-color: var(--mes-border) transparent;
+    /* reserve the gutter so a scrollbar appearing never shifts layout mid-hover */
+    scrollbar-gutter: stable;
   }
   .mes-landing [data-login-panel]::-webkit-scrollbar { width: 6px; }
   .mes-landing [data-login-panel]::-webkit-scrollbar-thumb {
@@ -236,7 +238,7 @@
     }
     .mes-flip-face,
     .mes-flip-back {
-      transition: border-color 0.3s ease;
+      transition: border-color 0.5s ease;
     }
     .mes-flip:hover .mes-flip-inner:not(.is-flipped) {
       transform: translateY(-4px);
