@@ -1,11 +1,14 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/logoIcon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Pre-CSS values mirror --mes-bg in src/styles/tokens.css (meta tags cannot
+         resolve CSS variables; this prevents a white flash before tokens load) -->
+    <meta name="theme-color" content="#0A0F1E" />
     <title>SFC PC SYSTEM</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>html { background: #0A0F1E; }</style>
   </head>
   <body>
     <div id="root"></div>

@@ -16,5 +16,8 @@ module.exports = {
       'warn',
       { allowConstantExport: true },
     ],
+    // Plain-JS codebase: data shapes are documented at the API layer (AUDIT.md),
+    // not enforced per component.
+    'react/prop-types': 'off',
   },
 }
