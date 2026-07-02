@@ -8,7 +8,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from 'src/contexts/AuthContext';
 import PageContainer from 'src/components/container/PageContainer';
 import { COMPONENT_STATUS } from 'src/components/mes/status-meta';
-import { fetchProjects } from 'src/utils/api';
+import { Donut } from 'src/components/mes/charts';
+import { Spinner } from 'src/components/mes/ui';
+import { fetchProjects, fetchComponentsByProjectId } from 'src/utils/api';
+import { buildStatusFromComponents } from 'src/views/mes/dashboard/data';
 import AuthLogin from './AuthLogin';
 import useLandingCinematics from './useLandingCinematics';
 import videoBg from 'src/assets/videos/Slow_cinematic_dolly_shot_in.mp4';
@@ -59,6 +62,123 @@ const CHAPTERS = [
 
 const thNumber = new Intl.NumberFormat('th-TH');
 
+// [MES] PerfCard — flip card in the performance bento. Front: thin numeral +
+// site name. Back (on click/tap): live per-status rings for that project,
+// lazy-fetched on first flip. Flip + ring pop are CSS-only (mobile-safe);
+// status colors render via the Donut chart primitive per ADR-0006.
+const PerfCard = ({ site, featured = false }) => {
+  const [flipped, setFlipped] = useState(false);
+  const [status, setStatus] = useState(null); // null → 'loading' → status object
+
+  const toggle = () => {
+    setFlipped((f) => !f);
+    if (status === null) {
+      setStatus('loading');
+      // Returns { precast, other } and never throws (api.js catches internally).
+      fetchComponentsByProjectId(site.id).then((res) => {
+        setStatus(buildStatusFromComponents(res));
+      });
+    }
+  };
+
+  const loaded = status !== null && status !== 'loading';
+  const statusTotal = loaded
+    ? Object.values(status).reduce((sum, v) => sum + v, 0)
+    : 0;
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-pressed={flipped}
+      data-perf-card
+      className={`mes-flip relative flex flex-col text-left ${
+        featured
+          ? 'min-h-[240px] sm:col-span-2 sm:row-span-2 sm:min-h-[360px]'
+          : 'min-h-[190px]'
+      }`}
+    >
+      <div className={`mes-flip-inner w-full flex-1 ${flipped ? 'is-flipped' : ''}`}>
+        {/* Front */}
+        <div
+          className={`mes-flip-face flex h-full w-full flex-col justify-between rounded-lg border border-mes-border bg-mes-surface ${
+            featured ? 'p-6 sm:p-8' : 'p-6'
+          }`}
+        >
+          <div className="self-end text-right">
+            <span
+              className={
+                featured
+                  ? 'text-6xl font-normal tabular-nums sm:text-8xl'
+                  : 'text-4xl font-normal tabular-nums'
+              }
+            >
+              {thNumber.format(site.components)}
+            </span>
+            {featured && <span className="ml-2 font-mono text-xs text-mes-muted">ชิ้น</span>}
+          </div>
+          <div>
+            <div className={featured ? 'text-lg font-semibold sm:text-xl' : 'text-sm font-semibold'}>
+              {site.name}
+            </div>
+            <div className="mt-1 font-mono text-xs text-mes-muted">
+              {featured ? 'ชิ้นงานที่ติดตามในโครงการนี้' : 'ชิ้นงาน'} · แตะดูสถานะ
+            </div>
+          </div>
+        </div>
+
+        {/* Back — mini status dashboard */}
+        <div
+          className={`mes-flip-back flex h-full w-full flex-col rounded-lg border border-mes-border bg-mes-surface ${
+            featured ? 'p-6 sm:p-8' : 'p-4'
+          }`}
+        >
+          <div className="flex items-baseline justify-between gap-2">
+            <div className={`truncate font-semibold ${featured ? 'text-lg' : 'text-xs'}`}>
+              {site.name}
+            </div>
+            <div className="shrink-0 font-mono text-[10px] text-mes-muted">สถานะชิ้นงาน</div>
+          </div>
+          <div className="flex w-full flex-1 items-center">
+            {loaded ? (
+              <div className="grid w-full grid-cols-5 gap-1">
+                {STAGES.map((stage, i) => {
+                  const count = status[stage.key] || 0;
+                  return (
+                    <div
+                      key={stage.key}
+                      className="mes-flip-ring flex min-w-0 flex-col items-center gap-1"
+                      style={{ '--ring-i': i }}
+                    >
+                      <Donut
+                        size={featured ? 56 : 38}
+                        thickness={featured ? 7 : 4}
+                        segments={[
+                          { value: count, cssVar: stage.cssVar },
+                          { value: Math.max(statusTotal - count, 0), cssVar: '--mes-surface-2' },
+                        ]}
+                      >
+                        <span className={`tabular-nums ${featured ? 'text-sm' : 'text-[10px]'}`}>
+                          {thNumber.format(count)}
+                        </span>
+                      </Donut>
+                      <span className="w-full truncate text-center font-mono text-[10px] text-mes-muted">
+                        {stage.th}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              flipped && <Spinner label="กำลังโหลดสถานะ…" />
+            )}
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+};
+
 const Login = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -78,15 +198,25 @@ const Login = () => {
         (sum, p) => sum + (parseInt(p.components, 10) || 0),
         0,
       );
-      // Top sites by component count feed the performance bento grid.
-      const top = [...projects]
+      // Performance bento: featured = biggest site (stable anchor); the four
+      // small cards are a random draw from the rest, so each visit shows a
+      // different mix of the customers we support.
+      const sorted = projects
         .map((p) => ({
           id: p.id,
           name: p.name || p.project_code || '—',
           components: parseInt(p.components, 10) || 0,
         }))
-        .sort((a, b) => b.components - a.components)
-        .slice(0, 5);
+        // ≥20 pieces: keeps small real customers, drops internal test projects
+        // ("test", sample panels) from the public showcase.
+        .filter((p) => p.components >= 20)
+        .sort((a, b) => b.components - a.components);
+      const pool = sorted.slice(1);
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      const top = sorted.length ? [sorted[0], ...pool.slice(0, 4)] : [];
       setLiveStats({ projects: projects.length, components, top });
     });
     return () => {
@@ -334,40 +464,11 @@ const Login = () => {
             </div>
 
             <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {/* Featured: largest site, on.energy-style numeral top-right */}
-              <div
-                data-perf-card
-                className="flex min-h-[220px] flex-col justify-between rounded-lg border border-mes-border bg-mes-surface p-6 sm:col-span-2 sm:row-span-2 sm:min-h-[360px] sm:p-8"
-              >
-                <div className="self-end text-right">
-                  <span className="text-6xl font-normal tabular-nums sm:text-8xl">
-                    {thNumber.format(liveStats.top[0].components)}
-                  </span>
-                  <span className="ml-2 font-mono text-xs text-mes-muted">ชิ้น</span>
-                </div>
-                <div>
-                  <div className="text-lg font-semibold sm:text-xl">{liveStats.top[0].name}</div>
-                  <div className="mt-1 font-mono text-xs text-mes-muted">
-                    ชิ้นงานที่ติดตามในโครงการนี้
-                  </div>
-                </div>
-              </div>
-
-              {/* Smaller site cards */}
+              {/* Featured: largest site; smaller cards: random draw per visit.
+                  Every card flips to a live per-status mini dashboard. */}
+              <PerfCard site={liveStats.top[0]} featured />
               {liveStats.top.slice(1).map((site) => (
-                <div
-                  key={site.id}
-                  data-perf-card
-                  className="flex min-h-[170px] flex-col justify-between rounded-lg border border-mes-border bg-mes-surface p-6"
-                >
-                  <div className="self-end text-4xl font-normal tabular-nums">
-                    {thNumber.format(site.components)}
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold">{site.name}</div>
-                    <div className="mt-1 font-mono text-xs text-mes-muted">ชิ้นงาน</div>
-                  </div>
-                </div>
+                <PerfCard key={site.id} site={site} />
               ))}
 
               {/* Gold accent card — the one full-color card (brand gold, navy ink) */}
@@ -375,12 +476,20 @@ const Login = () => {
                 to="/dashboards/modern"
                 data-perf-card
                 data-magnetic
-                className="flex min-h-[170px] flex-col justify-between rounded-lg bg-brand-gold p-6 text-brand-navy"
+                className="group flex min-h-[190px] rounded-lg bg-brand-gold text-brand-navy"
               >
-                <div className="font-mono text-xs">เปิดดูได้ ไม่ต้องเข้าสู่ระบบ</div>
-                <div className="text-lg font-bold">
-                  เปิดแดชบอร์ดสาธารณะ <span aria-hidden>→</span>
-                </div>
+                <span className="flex flex-1 flex-col justify-between p-6 transition-transform duration-300 motion-safe:group-hover:-translate-y-1">
+                  <span className="font-mono text-xs">เปิดดูได้ ไม่ต้องเข้าสู่ระบบ</span>
+                  <span className="text-lg font-bold">
+                    เปิดแดชบอร์ดสาธารณะ{' '}
+                    <span
+                      aria-hidden
+                      className="inline-block transition-transform duration-300 motion-safe:group-hover:translate-x-1"
+                    >
+                      →
+                    </span>
+                  </span>
+                </span>
               </Link>
             </div>
           </section>

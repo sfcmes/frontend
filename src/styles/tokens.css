@@ -190,6 +190,57 @@
      generate nothing for colors defined as raw var(), so alpha lives here. */
   .mes-fill-surface-80 { background-color: color-mix(in srgb, var(--mes-surface) 80%, transparent); }
 
+  /* [MES] Landing perf flip-cards — CSS-only 3D flip + hover lift + ring pop.
+     Works on mobile tap (no GSAP dependency); all motion is motion-safe. */
+  .mes-flip {
+    perspective: 1200px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mes-flip-inner {
+    position: relative;
+    transform-style: preserve-3d;
+  }
+  .mes-flip-face,
+  .mes-flip-back {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .mes-flip-back {
+    position: absolute;
+    inset: 0;
+    transform: rotateY(180deg);
+  }
+  .mes-flip-inner.is-flipped {
+    transform: rotateY(180deg);
+  }
+  @keyframes mes-pop {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .mes-flip-inner {
+      transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .mes-flip-face,
+    .mes-flip-back {
+      transition: border-color 0.3s ease;
+    }
+    .mes-flip:hover .mes-flip-inner:not(.is-flipped) {
+      transform: translateY(-4px);
+    }
+    .mes-flip:hover .mes-flip-inner.is-flipped {
+      transform: rotateY(180deg) translateY(-4px);
+    }
+    .mes-flip:hover .mes-flip-face,
+    .mes-flip:hover .mes-flip-back {
+      border-color: var(--brand-gold);
+    }
+    .mes-flip-inner.is-flipped .mes-flip-ring {
+      animation: mes-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-delay: calc(0.3s + var(--ring-i, 0) * 0.07s);
+    }
+  }
+
   /* Pipeline stages light up as the scrubbed progress line passes them
      (class toggled by the GSAP layer; base state comes from Tailwind classes) */
   .mes-landing [data-pipe-stage] { transition: border-color 0.5s ease; }
