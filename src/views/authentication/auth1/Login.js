@@ -10,7 +10,8 @@ import PageContainer from 'src/components/container/PageContainer';
 import { COMPONENT_STATUS } from 'src/components/mes/status-meta';
 import AuthLogin from './AuthLogin';
 import useLandingCinematics from './useLandingCinematics';
-import videoBg from 'src/assets/videos/Gen-3_image-prompt_landing.mp4';
+import videoBg from 'src/assets/videos/Slow_cinematic_dolly_shot_in.mp4';
+import videoPoster from 'src/assets/images/hero-poster.jpg';
 
 // Lifecycle stages shown on the landing strip (workflow order, no rejected).
 // Labels come from status-meta (ADR-0006 rule 4); rendered in brand gold/muted
@@ -72,13 +73,14 @@ const Login = () => {
             <video
               data-hero-video
               src={videoBg}
+              poster={videoPoster}
               autoPlay
               muted
               loop
               playsInline
               className="fixed inset-0 h-full w-full object-cover opacity-0"
             />
-            <div className="fixed inset-0 bg-brand-navy opacity-70" />
+            <div className="fixed inset-0 bg-brand-navy opacity-50" />
             <div className="mes-hero-vignette fixed inset-0" aria-hidden />
             <div data-video-veil className="fixed inset-0 bg-mes-bg opacity-0" aria-hidden />
             <div

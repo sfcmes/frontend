@@ -140,7 +140,9 @@ export default function useLandingCinematics(rootRef) {
           // and a veil that dims the whole layer as the story takes over.
           const video = root.querySelector('[data-hero-video]');
           if (video) {
-            gsap.to(video, { opacity: 0.16, duration: 1.8, ease: 'power2.inOut' });
+            // 0.3: the bespoke footage is already navy-graded with crushed blacks,
+            // so it carries more opacity than a bright generic loop would.
+            gsap.to(video, { opacity: 0.3, duration: 1.8, ease: 'power2.inOut' });
             gsap.to(video, {
               scale: 1.08,
               ease: 'none',
