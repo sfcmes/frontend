@@ -881,6 +881,23 @@ const confirmPOOrdered = (id, formData) =>
   });
 const confirmPOReceived = (id, data) => api.post(`/po/${id}/received`, data);
 
+// ---- Materials & Recipes (Material Requirement Calculation) ----
+// Internal-only (no public dashboard consumer) — every call requires auth.
+const fetchMaterials = (includeInactive = false) =>
+  api.get('/materials', { params: includeInactive ? { includeInactive: true } : {} });
+const createMaterial = (data) => api.post('/materials', data);
+const updateMaterial = (id, data) => api.put(`/materials/${id}`, data);
+
+const fetchMaterialRecipes = (componentType) =>
+  api.get('/materials/recipes', { params: componentType ? { componentType } : {} });
+const createMaterialRecipe = (data) => api.post('/materials/recipes', data);
+const activateMaterialRecipe = (id) => api.post(`/materials/recipes/${id}/activate`);
+
+// S5 (material requirements + PO generation) — added now so S5 doesn't touch api.js.
+const fetchMaterialRequirements = (projectIds = []) =>
+  api.get('/materials/requirements', { params: { projectIds: projectIds.join(',') } });
+const generateMaterialPO = (payload) => api.post('/materials/requirements/generate-po', payload);
+
 export {
   api,
   publicApi,
@@ -949,6 +966,14 @@ export {
   submitPO,
   confirmPOOrdered,
   confirmPOReceived,
+  fetchMaterials,
+  createMaterial,
+  updateMaterial,
+  fetchMaterialRecipes,
+  createMaterialRecipe,
+  activateMaterialRecipe,
+  fetchMaterialRequirements,
+  generateMaterialPO,
 };
 
 export default api; // Keep the default export
