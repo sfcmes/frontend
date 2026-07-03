@@ -102,10 +102,12 @@ const FormMaterialRequirements = () => {
   const [selectedMaterialIds, setSelectedMaterialIds] = useState(() => new Set());
   const [generatedPOs, setGeneratedPOs] = useState(null);
 
-  const onCalculate = async () => {
+  // Shared by the คำนวณ button and the post-generate auto-refresh — does not
+  // touch generatedPOs, so the success result panel stays visible when this
+  // runs after a PO generation.
+  const runCalculation = async () => {
     if (selectedProjectIds.length === 0) return;
     setCalculating(true);
-    setGeneratedPOs(null);
     try {
       const res = await fetchMaterialRequirements(selectedProjectIds);
       const data = res.data || {};
@@ -120,6 +122,11 @@ const FormMaterialRequirements = () => {
     } finally {
       setCalculating(false);
     }
+  };
+
+  const onCalculate = async () => {
+    setGeneratedPOs(null);
+    await runCalculation();
   };
 
   const toggleExpand = (id) => {
@@ -200,6 +207,11 @@ const FormMaterialRequirements = () => {
       setGenerateOpen(false);
       setGeneratedPOs(pos);
       showToast(`สร้างใบสั่งซื้อ (ร่าง) แล้ว ${pos.length} ฉบับ`);
+      // Prevent double-creating identical draft POs: clear the selection and
+      // refresh the table (draftQty/net) via the same calc the button uses.
+      // generatedPOs is untouched by runCalculation, so the panel above stays.
+      setSelectedMaterialIds(new Set());
+      await runCalculation();
     } catch (err) {
       showToast(err?.response?.data?.error || 'สร้างใบสั่งซื้อไม่สำเร็จ', 'error');
     } finally {
