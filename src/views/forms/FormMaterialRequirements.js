@@ -104,8 +104,10 @@ const FormMaterialRequirements = () => {
 
   // Shared by the คำนวณ button and the post-generate auto-refresh — does not
   // touch generatedPOs, so the success result panel stays visible when this
-  // runs after a PO generation.
-  const runCalculation = async () => {
+  // runs after a PO generation. autoSelect: false keeps the selection EMPTY
+  // (post-generate refresh): drafts don't reduce net, so auto-selecting all
+  // net>0 materials would instantly repopulate the just-cleared selection.
+  const runCalculation = async ({ autoSelect = true } = {}) => {
     if (selectedProjectIds.length === 0) return;
     setCalculating(true);
     try {
@@ -114,7 +116,9 @@ const FormMaterialRequirements = () => {
       setResult(data);
       setExpanded(new Set());
       setSelectedMaterialIds(
-        new Set((data.materials || []).filter((m) => m.net > 0).map((m) => m.material.id)),
+        autoSelect
+          ? new Set((data.materials || []).filter((m) => m.net > 0).map((m) => m.material.id))
+          : new Set(),
       );
       setPickerOpen(false);
     } catch (err) {
@@ -207,11 +211,11 @@ const FormMaterialRequirements = () => {
       setGenerateOpen(false);
       setGeneratedPOs(pos);
       showToast(`สร้างใบสั่งซื้อ (ร่าง) แล้ว ${pos.length} ฉบับ`);
-      // Prevent double-creating identical draft POs: clear the selection and
-      // refresh the table (draftQty/net) via the same calc the button uses.
-      // generatedPOs is untouched by runCalculation, so the panel above stays.
-      setSelectedMaterialIds(new Set());
-      await runCalculation();
+      // Prevent double-creating identical draft POs: refresh the table
+      // (draftQty) via the same calc the button uses, with autoSelect off so
+      // the selection stays EMPTY (drafts don't reduce net — auto-select
+      // would repopulate it). generatedPOs is untouched, so the panel stays.
+      await runCalculation({ autoSelect: false });
     } catch (err) {
       showToast(err?.response?.data?.error || 'สร้างใบสั่งซื้อไม่สำเร็จ', 'error');
     } finally {
