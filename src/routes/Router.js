@@ -20,6 +20,7 @@ const FormSection = Loadable(lazy(() => import('../views/forms/FormSection')));
 const FormQRCodeReader = Loadable(lazy(() => import('../views/forms/FormQRCodeReader')));
 const FormPO = Loadable(lazy(() => import('../views/forms/FormPO')));
 const FormMaterials = Loadable(lazy(() => import('../views/forms/FormMaterials')));
+const FormMaterialRequirements = Loadable(lazy(() => import('../views/forms/FormMaterialRequirements')));
 const FormComponentCard = Loadable(lazy(() => import('../views/forms/FormComponentCard')));
 
 // authentication
@@ -59,6 +60,7 @@ const Router = [
       { path: '/forms/form-qr-code-reader', element: <FormQRCodeReader /> },
       { path: '/forms/form-po', element: <FormPO /> },
       { path: '/forms/form-materials', element: <FormMaterials /> },
+      { path: '/forms/form-material-requirements', element: <FormMaterialRequirements /> },
       { path: '/pages/qr-code', element: <QRCodePage /> },
     ],
   },

@@ -19,7 +19,11 @@ const PODetailDialog = ({ open, onClose, po }) => {
       open={open}
       onClose={onClose}
       wide
-      title={`${po.po_number} — ${po.project_name}`}
+      title={
+        <>
+          {po.po_number} — {po.project_name || <span className="font-normal text-mes-muted">รวมหลายโครงการ</span>}
+        </>
+      }
       footer={<button className="mes-btn mes-btn-ghost" onClick={onClose}>ปิด</button>}
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

@@ -8,6 +8,7 @@ export const NAV_SECTIONS = [
       { id: 'dashboard', icon: 'aperture', title: 'ภาพรวมสถานะโครงการ', path: '/dashboards/modern' },
       { id: 'po', icon: 'file-invoice', title: 'ใบสั่งซื้อวัตถุดิบ (PO)', path: '/forms/form-po' },
       { id: 'materials', icon: 'cube', title: 'วัสดุและสูตร', path: '/forms/form-materials' },
+      { id: 'material-requirements', icon: 'clipboard-check', title: 'คำนวณวัสดุ', path: '/forms/form-material-requirements' },
     ],
   },
   {

@@ -239,7 +239,7 @@ const FormPO = () => {
                     <span className="font-mono text-sm font-semibold">{po.po_number}</span>
                     <span className="ml-auto"><StatusBadge status={po.status} kind="po" /></span>
                   </div>
-                  <div className="mt-1 truncate text-sm text-mes-muted">{po.project_name}</div>
+                  <div className="mt-1 truncate text-sm text-mes-muted">{po.project_name || 'รวมหลายโครงการ'}</div>
                   <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-mes-muted tabular-nums">
                     <span>{po.item_count} รายการ</span>
                     <span>วันที่สร้าง {dateStr(po.created_at)}</span>
@@ -274,7 +274,11 @@ const FormPO = () => {
                       style={isHi ? { boxShadow: 'inset 3px 0 0 var(--mes-accent)' } : undefined}
                     >
                       <td className="mes-td font-mono">{po.po_number}</td>
-                      <td className="mes-td"><span className="block max-w-[240px] truncate">{po.project_name}</span></td>
+                      <td className="mes-td">
+                        <span className={`block max-w-[240px] truncate ${po.project_name ? '' : 'text-mes-muted'}`}>
+                          {po.project_name || 'รวมหลายโครงการ'}
+                        </span>
+                      </td>
                       <td className="mes-td text-right">{po.item_count}</td>
                       <td className="mes-td">{dateStr(po.created_at)}</td>
                       <td className="mes-td">{dateStr(po.requested_delivery_date)}</td>
