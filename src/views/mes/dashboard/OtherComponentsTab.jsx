@@ -29,6 +29,16 @@ function getProjectIcon(projectCode = '') {
   return otherIcon;
 }
 
+// Product-type label for the card chip — buckets mirror getProjectIcon so the
+// icon and chip always agree. Cards here are titled by building name, which
+// reads like a precast project; the chip names the ชิ้นงานอื่นๆ product type.
+function getProjectType(projectCode = '') {
+  if (projectCode.startsWith('เสาเอ็น')) return 'เสาเอ็น';
+  if (projectCode.startsWith('คันกั้นล้อ')) return 'คันกั้นล้อ';
+  if (projectCode.startsWith('บ่อ')) return 'บ่อล้างล้อรถ';
+  return 'อื่นๆ';
+}
+
 function validateUpdate(component, fromStatus, toStatus, rawQty) {
   if (!fromStatus || !toStatus) return 'กรุณาเลือกสถานะต้นทางและปลายทาง';
   if (fromStatus === toStatus) return 'สถานะต้นทางและปลายทางต้องไม่เหมือนกัน';
@@ -232,8 +242,13 @@ export default function OtherComponentsTab({ userRole }) {
             >
               <img src={getProjectIcon(p.project_code || p.name)} alt="" className="h-10 w-10 rounded-sm object-cover" />
               <div className="min-w-0 grow">
-                <div className="truncate text-sm font-semibold">{p.name}</div>
-                <div className="text-xs text-mes-muted tabular-nums">
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 rounded-sm bg-mes-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-mes-muted">
+                    {getProjectType(p.project_code || p.name)}
+                  </span>
+                  <span className="min-w-0 truncate text-sm font-semibold">{p.name}</span>
+                </div>
+                <div className="mt-0.5 text-xs text-mes-muted tabular-nums">
                   {p.components.length} ประเภท · ทั้งหมด {fmt(total)} ชิ้น
                 </div>
               </div>
