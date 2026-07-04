@@ -59,6 +59,9 @@
 
   /* Elevation (overlays only — surfaces elevate via surface steps + border) */
   --shadow-overlay: 0 16px 48px rgba(4, 8, 20, 0.6);
+
+  /* Guided tour page-dim (shields around the spotlight hole) */
+  --tour-dim: rgba(4, 8, 20, 0.72);
 }
 
 @layer base {
