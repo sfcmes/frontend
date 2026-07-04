@@ -903,6 +903,11 @@ const generateMaterialPO = (payload) => api.post('/materials/requirements/genera
 // tool-calling loop can be slow, so allow a generous timeout.
 export const sendAiChat = (messages) => api.post('/ai/chat', { messages }, { timeout: 120000 });
 
+// Dashboard insight panels (F4). Both require auth (401 for guests). Risk is
+// pure SQL (fast, cached); defect calls GLM and can be slow — allow more time.
+export const fetchAiRiskAnalysis = () => api.get('/ai/risk-analysis');
+export const fetchAiDefectAnalysis = () => api.get('/ai/defect-analysis', { timeout: 60000 });
+
 export {
   api,
   publicApi,

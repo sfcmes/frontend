@@ -6,6 +6,7 @@ import { Hero } from './Hero';
 import { ProjectTable } from './ProjectTable';
 import { RightPanel } from './RightPanel';
 import { ProjectDrawer } from './Drawer';
+import { AiInsights } from './AiInsights';
 import { transformProjectBasic, buildStatusFromComponents, aggregateStatus } from './data';
 import { fetchProjects, fetchUserProjects, fetchComponentsByProjectId } from 'src/utils/api';
 
@@ -107,6 +108,8 @@ const Dashboard = () => {
         />
         <RightPanel project={selected} userRole={user?.role ?? null} onOpen={handleOpen} />
       </div>
+
+      <AiInsights user={user} />
 
       {drawer && (
         <ProjectDrawer
