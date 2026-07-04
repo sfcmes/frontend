@@ -294,15 +294,20 @@
 @media print {
   html, body { background: #fff !important; color: #000 !important; }
 
-  /* Re-point the surface/border tokens at paper values so EVERY consumer —
-     Tailwind bg-mes-surface-2 chips/cards, the Donut track ring (charts.jsx
-     reads var(--mes-surface-2) directly), and border-mes-border rules — turns
-     light in one stroke instead of chasing individual classes. No printed
-     element depends on these being dark (fixed overlays are hidden below). */
+  /* Re-point the whole theme-token family at paper values so EVERY consumer —
+     the MesShell wrapper (bg-mes-bg, would print navy with Chrome "Background
+     graphics" on), Tailwind bg-mes-surface-2 chips/cards, the Donut track ring
+     (charts.jsx reads var(--mes-surface-2) directly), border-mes-border rules,
+     and any var(--mes-text*) reader — turns print-safe in one stroke instead
+     of chasing individual classes. No printed element depends on these being
+     dark (fixed overlays are hidden below). */
   :root {
+    --mes-bg: #ffffff;
     --mes-surface: #fff;
     --mes-surface-2: #f2f2f2;
     --mes-border: #ccc;
+    --mes-text: #000;
+    --mes-text-muted: #333;
   }
 
   /* App chrome never prints. Sidebar is <aside>, bottom nav + menu is <nav>,
