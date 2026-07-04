@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
 import { SfcMark } from './Logo';
 import { pageTitle } from './nav';
+import { AiChatPanel } from 'src/components/mes/ai/AiChatPanel';
 
 const MesShell = () => {
   const { user, logout } = useAuth();
@@ -34,6 +35,7 @@ const MesShell = () => {
       </div>
 
       <BottomNav user={user} onLogout={logout} />
+      <AiChatPanel />
     </div>
   );
 };
