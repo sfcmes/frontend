@@ -7,6 +7,8 @@ import { useAuth } from 'src/contexts/AuthContext';
 import { fetchProjects, fetchMaterialRequirements, generateMaterialPO } from 'src/utils/api';
 import { Icon } from 'src/components/mes/Icon';
 import { Modal, EmptyState, Spinner, useToast, CardHeader } from 'src/components/mes/ui';
+import { GuidedTour } from 'src/components/mes/tour/GuidedTour';
+import { useTour } from 'src/components/mes/tour/useTour';
 
 const SOURCE_ATTR_TH = {
   volume: 'ปริมาตร (m³)',
@@ -17,6 +19,78 @@ const SOURCE_ATTR_TH = {
 
 const nf = new Intl.NumberFormat('th-TH', { maximumFractionDigits: 3 });
 const fmt = (n) => (n === null || n === undefined || n === '' ? '-' : nf.format(Number(n)));
+
+// Guided tour — GuidedTour walks these top-to-bottom. `when` gates a step by
+// page state (false → silently skipped), `waitFor` holds the step until the
+// user really performs the action. Targets = data-tour attributes below.
+const TOUR_STORAGE_KEY = 'mes-tour-material-requirements-v1';
+const TOUR_STEPS = [
+  {
+    id: 'welcome',
+    target: null,
+    title: 'ยินดีต้อนรับสู่หน้าคำนวณวัสดุ',
+    body: 'หน้านี้ช่วยคำนวณว่าต้องสั่งวัสดุอะไรเพิ่มเท่าไร จากชิ้นงานทั้งหมดในโครงการที่เลือก มาดูวิธีใช้งานทีละขั้นกัน',
+    nextLabel: 'เริ่มทัวร์',
+  },
+  {
+    id: 'no-projects',
+    target: null,
+    when: (s) => !s.projectsLoading && !s.hasProjects,
+    title: 'ยังไม่มีโครงการในระบบ',
+    body: 'ต้องมีโครงการอย่างน้อย 1 โครงการก่อนจึงจะคำนวณได้ — ไปที่เมนูโครงการเพื่อสร้างโครงการ แล้วค่อยกลับมาที่หน้านี้',
+    nextLabel: 'จบทัวร์',
+  },
+  {
+    id: 'pick-project',
+    target: 'project-picker',
+    when: (s) => s.hasProjects,
+    waitFor: (s) => s.selectedCount > 0,
+    title: 'เลือกโครงการ',
+    body: 'ติ๊กเลือกโครงการที่ต้องการคำนวณ เลือกได้หลายโครงการพร้อมกัน — ลองเลือกดูเลย',
+  },
+  {
+    id: 'calculate',
+    target: 'calc-button',
+    when: (s) => s.hasProjects,
+    waitFor: (s) => s.hasResult,
+    title: 'กดคำนวณ',
+    body: 'กดปุ่มนี้เพื่อให้ระบบคำนวณวัสดุที่ต้องใช้จากชิ้นงานทุกตัวในโครงการที่เลือก',
+  },
+  {
+    id: 'results',
+    target: 'results-table',
+    when: (s) => s.hasMaterials,
+    title: 'ตารางความต้องการวัสดุ',
+    body: 'แต่ละแถวคือวัสดุ 1 รายการ: ต้องใช้ (รวมเผื่อเสีย), ปัดขึ้น, สั่งแล้ว/ค้างรับ และคอลัมน์สำคัญ "ต้องสั่งเพิ่ม" คือยอดที่ยังขาด',
+  },
+  {
+    id: 'breakdown',
+    target: 'first-row',
+    when: (s) => s.hasMaterials,
+    title: 'ดูที่มาของตัวเลข',
+    body: 'กดที่แถววัสดุเพื่อดูรายชิ้นงาน: ค่าที่ใช้ × ตัวคูณ × เผื่อเสีย% ของแต่ละชิ้น — ตรวจสอบย้อนกลับได้ทุกตัวเลข',
+  },
+  {
+    id: 'warnings',
+    target: 'warnings-banner',
+    when: (s) => s.hasWarnings,
+    title: 'คำเตือนในการคำนวณ',
+    body: 'ชิ้นงานที่คำนวณไม่ได้ (ไม่มีข้อมูลขนาด หรือยังไม่มีสูตร) จะแสดงที่นี่ — ไปเพิ่มข้อมูลที่หน้าวัสดุและสูตร แล้วคำนวณใหม่',
+  },
+  {
+    id: 'generate',
+    target: 'generate-bar',
+    when: (s) => s.isBuyer && s.hasMaterials,
+    title: 'สร้างใบสั่งซื้อ (ร่าง)',
+    body: 'ติ๊กเลือกวัสดุที่จะสั่ง แล้วกดปุ่มนี้ — ระบบจะสร้าง PO สถานะร่าง แยกตามผู้ขายให้อัตโนมัติ',
+  },
+  {
+    id: 'finish',
+    target: 'help-button',
+    title: 'จบทัวร์แล้ว',
+    body: 'อยากดูทัวร์นี้อีกครั้ง กดปุ่มนี้ได้ตลอดเวลา',
+  },
+];
 
 // Explainability drilldown — shared between the mobile card and the md+ table row.
 function ComponentBreakdown({ components, projectNameById }) {
@@ -225,12 +299,42 @@ const FormMaterialRequirements = () => {
 
   const selectedCount = selectedMaterialIds.size;
 
+  // ---- guided tour ----
+  const tourState = useMemo(
+    () => ({
+      projectsLoading,
+      hasProjects: projects.length > 0,
+      selectedCount: selectedProjectIds.length,
+      hasResult: !!result,
+      hasMaterials: materials.length > 0,
+      hasWarnings,
+      isBuyer,
+    }),
+    [projectsLoading, projects.length, selectedProjectIds.length, result, materials.length, hasWarnings, isBuyer],
+  );
+  const tour = useTour({ storageKey: TOUR_STORAGE_KEY, steps: TOUR_STEPS, state: tourState });
+
   return (
     <div className="mes-card">
-      <CardHeader title="คำนวณความต้องการวัสดุ" sub="เลือกโครงการเพื่อคำนวณยอดวัสดุที่ต้องสั่งซื้อเพิ่ม" />
+      <CardHeader
+        title="คำนวณความต้องการวัสดุ"
+        sub="เลือกโครงการเพื่อคำนวณยอดวัสดุที่ต้องสั่งซื้อเพิ่ม"
+        right={
+          <button
+            type="button"
+            data-tour="help-button"
+            className="mes-btn mes-btn-ghost !px-3"
+            onClick={tour.start}
+            aria-label="วิธีใช้งาน"
+            title="วิธีใช้งาน"
+          >
+            <Icon name="help-circle" size={18} />
+          </button>
+        }
+      />
 
       {/* Project picker */}
-      <div className="border-b border-mes-border p-3 md:p-5">
+      <div data-tour="project-picker" className="border-b border-mes-border p-3 md:p-5">
         <button
           type="button"
           className="flex w-full items-center gap-2 text-left text-sm font-semibold text-mes-text"
@@ -270,6 +374,7 @@ const FormMaterialRequirements = () => {
             <div className="mt-3 flex justify-end">
               <button
                 type="button"
+                data-tour="calc-button"
                 className="mes-btn mes-btn-primary"
                 onClick={onCalculate}
                 disabled={selectedProjectIds.length === 0 || calculating}
@@ -291,7 +396,7 @@ const FormMaterialRequirements = () => {
         <div className="p-3 md:p-5">
           {/* Warnings banner — never hidden, never silently zeroed */}
           {hasWarnings && (
-            <div className="mb-4 rounded-md border border-mes-accent/40 bg-mes-surface-2 p-3 md:p-4">
+            <div data-tour="warnings-banner" className="mb-4 rounded-md border border-mes-accent/40 bg-mes-surface-2 p-3 md:p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-mes-accent">
                 <Icon name="alert-triangle" size={16} /> คำเตือนในการคำนวณ
               </div>
@@ -348,13 +453,13 @@ const FormMaterialRequirements = () => {
           ) : (
             <>
               {/* base: cards */}
-              <div className="flex flex-col gap-2 md:hidden">
-                {materials.map((m) => {
+              <div data-tour="results-table" className="flex flex-col gap-2 md:hidden">
+                {materials.map((m, idx) => {
                   const id = m.material.id;
                   const open = expanded.has(id);
                   const checked = selectedMaterialIds.has(id);
                   return (
-                    <div key={id} className="mes-card p-3">
+                    <div key={id} data-tour={idx === 0 ? 'first-row' : undefined} className="mes-card p-3">
                       <div className="flex items-start gap-2">
                         <input
                           type="checkbox"
@@ -404,7 +509,7 @@ const FormMaterialRequirements = () => {
               </div>
 
               {/* md+: table */}
-              <div className="hidden md:block">
+              <div data-tour="results-table" className="hidden md:block">
                 <table className="w-full">
                   <thead>
                     <tr>
@@ -419,13 +524,13 @@ const FormMaterialRequirements = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {materials.map((m) => {
+                    {materials.map((m, idx) => {
                       const id = m.material.id;
                       const open = expanded.has(id);
                       const checked = selectedMaterialIds.has(id);
                       return (
                         <Fragment key={id}>
-                          <tr>
+                          <tr data-tour={idx === 0 ? 'first-row' : undefined}>
                             <td className="mes-td">
                               <input
                                 type="checkbox"
@@ -481,7 +586,7 @@ const FormMaterialRequirements = () => {
 
           {/* Generate bar — buyer/Admin only action gate */}
           {isBuyer && materials.length > 0 && (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-mes-border bg-mes-surface p-3">
+            <div data-tour="generate-bar" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-mes-border bg-mes-surface p-3">
               <span className="text-sm text-mes-muted">เลือก {selectedCount} วัสดุ</span>
               <button
                 type="button"
@@ -572,6 +677,18 @@ const FormMaterialRequirements = () => {
           />
         </div>
       </Modal>
+
+      <GuidedTour
+        open={tour.open}
+        step={tour.step}
+        stepIndex={tour.stepIndex}
+        total={tour.total}
+        isLast={tour.isLast}
+        state={tourState}
+        onNext={tour.next}
+        onBack={tour.back}
+        onClose={tour.close}
+      />
 
       {toastNode}
     </div>
