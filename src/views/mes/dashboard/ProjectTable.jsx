@@ -85,9 +85,18 @@ export function ProjectTable({ projects, selectedId, userRole, onSelect, onOpen 
 
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return projects.filter(
-      (p) => p.kind === tab && (!s || p.name.toLowerCase().includes(s) || p.code.toLowerCase().includes(s)),
-    );
+    return projects
+      .filter(
+        // total > 0: /api/projects includes projects tracked ONLY as ชิ้นงานอื่นๆ
+        // (เสาเอ็น/บ่อ… codes, zero precast components) — they live in the other
+        // tab; listing their empty rows here reads as swapped tabs.
+        (p) =>
+          p.kind === tab &&
+          p.total > 0 &&
+          (!s || p.name.toLowerCase().includes(s) || p.code.toLowerCase().includes(s)),
+      )
+      // The API has no stable ordering — sort deterministically, biggest first.
+      .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'th'));
   }, [projects, tab, q]);
 
   const clear = useCallback(() => setQ(''), []);
