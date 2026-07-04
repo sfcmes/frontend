@@ -1,12 +1,14 @@
-// [MES] ChatMessage — one chat bubble + navigation link chips
+// [MES] ChatMessage — one chat bubble + grounded charts + navigation link chips
 import { useNavigate } from 'react-router-dom';
 import { Icon } from 'src/components/mes/Icon';
+import { ChatChart } from 'src/components/mes/ai/ChatChart';
 
 // User bubbles sit right; assistant (and error) bubbles sit left with an avatar.
 // Error bubbles reuse the semantic danger token (same one that colours toasts/
 // mes-btn-danger) — NOT a workflow status colour, so the StatusBadge rule holds.
-// charts/datasets are intentionally carried on the message but not rendered here
-// (task F3 renders them without touching the hook).
+// Grounded chart/dataset payloads (F3) render below the bubble text via ChatChart;
+// defensive optional-chaining means messages whose datasets were stripped from
+// sessionStorage simply render no download chips.
 export function ChatMessage({ message, onNavigate }) {
   const navigate = useNavigate();
 
@@ -36,6 +38,7 @@ export function ChatMessage({ message, onNavigate }) {
         >
           {isError ? `⚠ ${message.content}` : message.content}
         </div>
+        {!isError && <ChatChart charts={message.charts} datasets={message.datasets} />}
         {links.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {links.map((link, i) => (
