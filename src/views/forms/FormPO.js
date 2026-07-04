@@ -15,6 +15,8 @@ import FVPurchaseOrder from 'src/components/forms/form-validation/FVPurchaseOrde
 import POOrderedDialog from './po-dialogs/POOrderedDialog';
 import POReceivedDialog from './po-dialogs/POReceivedDialog';
 import PODetailDialog from './po-dialogs/PODetailDialog';
+import { GuidedTour } from 'src/components/mes/tour/GuidedTour';
+import { useTour } from 'src/components/mes/tour/useTour';
 
 const TABS = [
   { key: 'all', label: 'ทั้งหมด' },
@@ -37,6 +39,52 @@ const toFormValues = (po) => ({
 });
 
 const dateStr = (d) => (d ? String(d).slice(0, 10) : '-');
+
+// Guided tour — GuidedTour walks these top-to-bottom. `when` gates a step by
+// page state (false → silently skipped). All steps are passive (ถัดไป only) —
+// the status tabs are just filters, so nothing forces user interaction.
+const TOUR_STORAGE_KEY = 'mes-tour-po-v1';
+const TOUR_STEPS = [
+  {
+    id: 'welcome',
+    target: null,
+    title: 'ยินดีต้อนรับสู่หน้าใบสั่งซื้อ',
+    body: 'หน้านี้ติดตามใบสั่งซื้อวัตถุดิบ (PO) ตั้งแต่ฉบับร่างจนรับของเข้าคลัง มาดูทีละส่วนกัน',
+    nextLabel: 'เริ่มทัวร์',
+  },
+  {
+    id: 'create-po',
+    target: 'create-po',
+    title: 'สร้าง PO ใหม่',
+    body: 'กดปุ่มนี้เพื่อสร้างใบสั่งซื้อ — บันทึกเป็นฉบับร่างก่อน หรือส่งให้ผู้จัดซื้อเลยก็ได้ (ระบบส่งอีเมลแจ้งอัตโนมัติ)',
+  },
+  {
+    id: 'status-tabs',
+    target: 'status-tabs',
+    title: 'วงจรสถานะ PO',
+    body: 'PO เดินทางจาก ร่าง → รอสั่งซื้อ → สั่งซื้อแล้ว → รับของแล้ว — กดแท็บเพื่อกรองรายการตามสถานะ',
+  },
+  {
+    id: 'po-table',
+    target: 'po-table',
+    when: (s) => s.hasPOs,
+    title: 'รายการใบสั่งซื้อ',
+    body: 'แต่ละแถวแสดง เลขที่ PO โครงการ จำนวนรายการ วันที่สร้าง กำหนดส่ง และสถานะ',
+  },
+  {
+    id: 'row-actions',
+    target: 'first-row',
+    when: (s) => s.hasPOs,
+    title: 'ปุ่มดำเนินการตามสถานะ',
+    body: 'ปุ่มท้ายแถวเปลี่ยนตามสถานะ — ร่าง: แก้ไข/ลบ · รอสั่งซื้อ: ยืนยันสั่งซื้อ (ผู้จัดซื้อ/Admin) · สั่งซื้อแล้ว: ยืนยันรับของ (ผู้จัดซื้อ/Admin) · อื่นๆ: ดูรายละเอียด',
+  },
+  {
+    id: 'finish',
+    target: 'help-button',
+    title: 'จบทัวร์แล้ว',
+    body: 'อยากดูทัวร์นี้อีกครั้ง กดปุ่มนี้ได้ตลอดเวลา',
+  },
+];
 
 const FormPO = () => {
   const { user } = useAuth();
@@ -79,6 +127,13 @@ const FormPO = () => {
   }, [lockProjectId]);
 
   const filtered = tab === 'all' ? rows : rows.filter((r) => r.status === tab);
+
+  // ---- guided tour ----
+  const tourState = useMemo(
+    () => ({ hasPOs: !loading && filtered.length > 0, isBuyer }),
+    [loading, filtered.length, isBuyer],
+  );
+  const tour = useTour({ storageKey: TOUR_STORAGE_KEY, steps: TOUR_STEPS, state: tourState });
 
   // ---- form save handlers ----
   const persistDraft = async (values) => {
@@ -203,13 +258,25 @@ const FormPO = () => {
       <CardHeader
         title="ใบสั่งซื้อวัตถุดิบ (PO)"
         right={
-          <button className="mes-btn mes-btn-primary" onClick={openCreate}>
-            <Icon name="plus" size={15} /> สร้าง PO ใหม่
-          </button>
+          <>
+            <button
+              type="button"
+              data-tour="help-button"
+              className="mes-btn mes-btn-ghost !px-3"
+              onClick={tour.start}
+              aria-label="วิธีใช้งาน"
+              title="วิธีใช้งาน"
+            >
+              <Icon name="help-circle" size={18} />
+            </button>
+            <button data-tour="create-po" className="mes-btn mes-btn-primary" onClick={openCreate}>
+              <Icon name="plus" size={15} /> สร้าง PO ใหม่
+            </button>
+          </>
         }
       />
 
-      <div className="flex gap-1 overflow-x-auto border-b border-mes-border px-3 pt-2">
+      <div data-tour="status-tabs" className="flex gap-1 overflow-x-auto border-b border-mes-border px-3 pt-2">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -230,11 +297,11 @@ const FormPO = () => {
       ) : (
         <>
           {/* base: cards */}
-          <div className="flex flex-col gap-2 p-3 md:hidden">
-            {filtered.map((po) => {
+          <div data-tour="po-table" className="flex flex-col gap-2 p-3 md:hidden">
+            {filtered.map((po, idx) => {
               const isHi = highlightId && String(po.id) === highlightId;
               return (
-                <div key={po.id} className={`mes-card p-3 ${isHi ? 'border-mes-accent' : ''}`}>
+                <div key={po.id} data-tour={idx === 0 ? 'first-row' : undefined} className={`mes-card p-3 ${isHi ? 'border-mes-accent' : ''}`}>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-sm font-semibold">{po.po_number}</span>
                     <span className="ml-auto"><StatusBadge status={po.status} kind="po" /></span>
@@ -251,7 +318,7 @@ const FormPO = () => {
             })}
           </div>
           {/* md+: table */}
-          <div className="hidden md:block">
+          <div data-tour="po-table" className="hidden md:block">
             <table className="w-full">
               <thead>
                 <tr>
@@ -265,11 +332,12 @@ const FormPO = () => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((po) => {
+                {filtered.map((po, idx) => {
                   const isHi = highlightId && String(po.id) === highlightId;
                   return (
                     <tr
                       key={po.id}
+                      data-tour={idx === 0 ? 'first-row' : undefined}
                       className={isHi ? 'bg-mes-surface-2' : ''}
                       style={isHi ? { boxShadow: 'inset 3px 0 0 var(--mes-accent)' } : undefined}
                     >
@@ -322,6 +390,17 @@ const FormPO = () => {
         message={`ลบใบสั่งซื้อ ${deleteTarget?.po_number || ''}?`}
         confirmLabel="ลบ"
         danger
+      />
+      <GuidedTour
+        open={tour.open}
+        step={tour.step}
+        stepIndex={tour.stepIndex}
+        total={tour.total}
+        isLast={tour.isLast}
+        state={tourState}
+        onNext={tour.next}
+        onBack={tour.back}
+        onClose={tour.close}
       />
       {toastNode}
     </div>
