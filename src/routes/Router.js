@@ -23,6 +23,9 @@ const FormMaterials = Loadable(lazy(() => import('../views/forms/FormMaterials')
 const FormMaterialRequirements = Loadable(lazy(() => import('../views/forms/FormMaterialRequirements')));
 const FormComponentCard = Loadable(lazy(() => import('../views/forms/FormComponentCard')));
 
+// AI assistant
+const AiChatPage = Loadable(lazy(() => import('../views/mes/ai/AiChatPage')));
+
 // authentication
 const Register = Loadable(lazy(() => import('../views/authentication/auth1/Register')));
 const ManageUser = Loadable(lazy(() => import('../views/authentication/auth1/ManageUser')));
@@ -62,6 +65,7 @@ const Router = [
       { path: '/forms/form-materials', element: <FormMaterials /> },
       { path: '/forms/form-material-requirements', element: <FormMaterialRequirements /> },
       { path: '/pages/qr-code', element: <QRCodePage /> },
+      { path: '/ai/chat', element: <AiChatPage /> },
     ],
   },
 

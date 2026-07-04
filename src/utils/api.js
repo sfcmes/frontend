@@ -898,6 +898,11 @@ const fetchMaterialRequirements = (projectIds = []) =>
   api.get('/materials/requirements', { params: { projectIds: projectIds.join(',') } });
 const generateMaterialPO = (payload) => api.post('/materials/requirements/generate-po', payload);
 
+// ---- AI assistant (tool-grounded chat) ----
+// Uses the authenticated `api` instance (401-refresh interceptor). The GLM
+// tool-calling loop can be slow, so allow a generous timeout.
+export const sendAiChat = (messages) => api.post('/ai/chat', { messages }, { timeout: 120000 });
+
 export {
   api,
   publicApi,
