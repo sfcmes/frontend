@@ -9,6 +9,8 @@ import { Icon } from 'src/components/mes/Icon';
 import { ConfirmDialog, EmptyState, Spinner, useToast, CardHeader } from 'src/components/mes/ui';
 import FVMaterial from './material-dialogs/FVMaterial';
 import FVMaterialRecipe from './material-dialogs/FVMaterialRecipe';
+import { GuidedTour } from 'src/components/mes/tour/GuidedTour';
+import { useTour } from 'src/components/mes/tour/useTour';
 
 const SOURCE_ATTR_TH = {
   volume: 'ปริมาตร (m³)',
@@ -28,6 +30,67 @@ const RECIPE_STATUS_TH = {
 const TABS = [
   { key: 'materials', label: 'ทะเบียนวัสดุ' },
   { key: 'recipes', label: 'สูตรวัสดุ' },
+];
+
+// Guided tour — GuidedTour walks these top-to-bottom. `when` gates a step by
+// page state (false → silently skipped), `waitFor` holds the step until the
+// user really performs the action. Targets = data-tour attributes below.
+const TOUR_STORAGE_KEY = 'mes-tour-materials-v1';
+const TOUR_STEPS = [
+  {
+    id: 'welcome',
+    target: null,
+    title: 'ยินดีต้อนรับสู่หน้าวัสดุและสูตร',
+    body: 'หน้านี้จัดการทะเบียนวัสดุที่สั่งซื้อได้ และสูตรสำหรับคำนวณความต้องการวัสดุจากชิ้นงาน มาดูทีละส่วนกัน',
+    nextLabel: 'เริ่มทัวร์',
+  },
+  {
+    id: 'tabs',
+    target: 'tab-bar',
+    title: 'สองแท็บหลัก',
+    body: '"ทะเบียนวัสดุ" คือรายการวัสดุทั้งหมดที่สั่งซื้อได้ ส่วน "สูตรวัสดุ" คือกติกาแปลงชิ้นงานเป็นยอดวัสดุที่ต้องใช้',
+  },
+  {
+    id: 'materials-table',
+    target: 'materials-table',
+    when: (s) => s.tab === 'materials' && s.hasMaterials,
+    title: 'ทะเบียนวัสดุ',
+    body: 'แต่ละแถวคือวัสดุ 1 รายการ: รหัส หน่วย ขนาดแพ็ค สั่งขั้นต่ำ ผู้ขายหลัก และสถานะใช้งาน',
+  },
+  {
+    id: 'add-material',
+    target: 'add-material',
+    when: (s) => s.tab === 'materials' && s.isBuyer,
+    title: 'เพิ่มวัสดุ',
+    body: 'กดปุ่มนี้เพื่อเพิ่มวัสดุใหม่ — แก้ไขหรือปิดใช้งานวัสดุเดิมได้จากปุ่มท้ายแถว',
+  },
+  {
+    id: 'switch-recipes',
+    target: 'recipes-tab',
+    waitFor: (s) => s.tab === 'recipes',
+    title: 'ไปดูสูตรวัสดุ',
+    body: 'ลองกดแท็บ "สูตรวัสดุ" เพื่อดูส่วนสูตรการคำนวณ',
+  },
+  {
+    id: 'create-recipe',
+    target: 'create-recipe',
+    when: (s) => s.tab === 'recipes',
+    title: 'สร้างสูตร (ร่าง)',
+    body: 'กำหนดว่าชิ้นงานประเภทไหนใช้วัสดุอะไร: แหล่งค่า (ปริมาตร/พื้นที่/น้ำหนัก/ต่อชิ้น) × ตัวคูณ × เผื่อเสีย% — ทุกคนสร้างร่างได้',
+  },
+  {
+    id: 'governance',
+    target: 'recipes-list',
+    when: (s) => s.tab === 'recipes',
+    title: 'ร่าง → เปิดใช้งาน',
+    body: 'สูตรเริ่มที่สถานะ "ร่าง" ผู้ดูแลระบบเป็นผู้กดเปิดใช้งาน (รุ่นเดิมของคู่เดียวกันถูกปลดอัตโนมัติ) — การคำนวณวัสดุใช้เฉพาะสูตรที่ "ใช้งาน"',
+  },
+  {
+    id: 'finish',
+    target: 'help-button',
+    title: 'จบทัวร์แล้ว',
+    body: 'อยากดูทัวร์นี้อีกครั้ง กดปุ่มนี้ได้ตลอดเวลา',
+  },
 ];
 
 const FormMaterials = () => {
@@ -92,6 +155,18 @@ const FormMaterials = () => {
   }, [recipes]);
 
   const activeMaterials = useMemo(() => materials.filter((m) => m.active), [materials]);
+
+  // ---- guided tour ----
+  const tourState = useMemo(
+    () => ({
+      tab,
+      hasMaterials: !materialsLoading && materials.length > 0,
+      isBuyer,
+      isAdmin,
+    }),
+    [tab, materialsLoading, materials.length, isBuyer, isAdmin],
+  );
+  const tour = useTour({ storageKey: TOUR_STORAGE_KEY, steps: TOUR_STEPS, state: tourState });
 
   // ---- material actions ----
   const openCreateMaterial = () => { setEditMaterial(null); setMaterialFormOpen(true); };
@@ -163,12 +238,27 @@ const FormMaterials = () => {
 
   return (
     <div className="mes-card">
-      <CardHeader title="วัสดุและสูตรการคำนวณ" />
+      <CardHeader
+        title="วัสดุและสูตรการคำนวณ"
+        right={
+          <button
+            type="button"
+            data-tour="help-button"
+            className="mes-btn mes-btn-ghost !px-3"
+            onClick={tour.start}
+            aria-label="วิธีใช้งาน"
+            title="วิธีใช้งาน"
+          >
+            <Icon name="help-circle" size={18} />
+          </button>
+        }
+      />
 
-      <div className="flex gap-1 overflow-x-auto border-b border-mes-border px-3 pt-2">
+      <div data-tour="tab-bar" className="flex gap-1 overflow-x-auto border-b border-mes-border px-3 pt-2">
         {TABS.map((t) => (
           <button
             key={t.key}
+            data-tour={t.key === 'recipes' ? 'recipes-tab' : undefined}
             onClick={() => setTab(t.key)}
             className={`min-h-touch md:min-h-0 whitespace-nowrap rounded-t-sm px-3 py-2 text-sm font-semibold border-b-2 -mb-px ${
               tab === t.key ? 'border-mes-accent text-mes-accent' : 'border-transparent text-mes-muted hover:text-mes-text'
@@ -183,7 +273,7 @@ const FormMaterials = () => {
         <div>
           {isBuyer && (
             <div className="flex justify-end px-3 pt-3 md:px-5">
-              <button className="mes-btn mes-btn-primary" onClick={openCreateMaterial}>
+              <button data-tour="add-material" className="mes-btn mes-btn-primary" onClick={openCreateMaterial}>
                 <Icon name="plus" size={15} /> เพิ่มวัสดุ
               </button>
             </div>
@@ -196,7 +286,7 @@ const FormMaterials = () => {
           ) : (
             <>
               {/* base: cards */}
-              <div className="flex flex-col gap-2 p-3 md:hidden">
+              <div data-tour="materials-table" className="flex flex-col gap-2 p-3 md:hidden">
                 {materials.map((m) => (
                   <div key={m.id} className="mes-card p-3">
                     <div className="flex items-center gap-2">
@@ -222,7 +312,7 @@ const FormMaterials = () => {
                 ))}
               </div>
               {/* md+: table */}
-              <div className="hidden md:block">
+              <div data-tour="materials-table" className="hidden md:block">
                 <table className="w-full">
                   <thead>
                     <tr>
@@ -268,18 +358,19 @@ const FormMaterials = () => {
         <div>
           <div className="flex flex-wrap items-center justify-between gap-2 px-3 pt-3 md:px-5">
             <p className="text-xs text-mes-muted">วิศวกรรมสร้างสูตร (ร่าง) — ผู้ดูแลระบบเป็นผู้เปิดใช้งาน</p>
-            <button className="mes-btn mes-btn-primary" onClick={() => setRecipeFormOpen(true)}>
+            <button data-tour="create-recipe" className="mes-btn mes-btn-primary" onClick={() => setRecipeFormOpen(true)}>
               <Icon name="plus" size={15} /> สร้างสูตร (ร่าง)
             </button>
           </div>
 
-          {recipesLoading ? (
-            <Spinner />
-          ) : recipesByType.length === 0 ? (
-            <EmptyState icon="clipboard-list" title="ยังไม่มีสูตรในระบบ" />
-          ) : (
-            <div className="flex flex-col gap-5 p-3 md:p-5">
-              {recipesByType.map(([type, rows]) => (
+          <div data-tour="recipes-list">
+            {recipesLoading ? (
+              <Spinner />
+            ) : recipesByType.length === 0 ? (
+              <EmptyState icon="clipboard-list" title="ยังไม่มีสูตรในระบบ" />
+            ) : (
+              <div className="flex flex-col gap-5 p-3 md:p-5">
+                {recipesByType.map(([type, rows]) => (
                 <div key={type}>
                   <h3 className="mb-2 text-sm font-semibold text-mes-text">{type}</h3>
                   {/* base: cards */}
@@ -361,7 +452,8 @@ const FormMaterials = () => {
                 </div>
               ))}
             </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 
@@ -401,6 +493,18 @@ const FormMaterials = () => {
         message={`การเปิดใช้งานสูตรนี้จะยกเลิกสูตรที่ใช้งานอยู่เดิมของ "${activateTarget?.material_name_th || ''}" สำหรับประเภทชิ้นงาน "${activateTarget?.component_type || ''}" ต้องการดำเนินการต่อหรือไม่?`}
         confirmLabel="เปิดใช้งาน"
         busy={activateBusy}
+      />
+
+      <GuidedTour
+        open={tour.open}
+        step={tour.step}
+        stepIndex={tour.stepIndex}
+        total={tour.total}
+        isLast={tour.isLast}
+        state={tourState}
+        onNext={tour.next}
+        onBack={tour.back}
+        onClose={tour.close}
       />
 
       {toastNode}
