@@ -294,6 +294,17 @@
 @media print {
   html, body { background: #fff !important; color: #000 !important; }
 
+  /* Re-point the surface/border tokens at paper values so EVERY consumer —
+     Tailwind bg-mes-surface-2 chips/cards, the Donut track ring (charts.jsx
+     reads var(--mes-surface-2) directly), and border-mes-border rules — turns
+     light in one stroke instead of chasing individual classes. No printed
+     element depends on these being dark (fixed overlays are hidden below). */
+  :root {
+    --mes-surface: #fff;
+    --mes-surface-2: #f2f2f2;
+    --mes-border: #ccc;
+  }
+
   /* App chrome never prints. Sidebar is <aside>, bottom nav + menu is <nav>,
      the breadcrumb topbar is <header>; any fixed overlay (chat launcher/sheet,
      toasts) is position:fixed via Tailwind's .fixed utility. */

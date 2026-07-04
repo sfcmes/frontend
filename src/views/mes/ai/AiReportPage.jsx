@@ -282,6 +282,20 @@ const AiReportPage = () => {
       const wsPo = XLSX.utils.json_to_sheet(poRows, { header: ['สถานะ', 'จำนวน'] });
       XLSX.utils.book_append_sheet(wb, wsPo, sanitizeSheetName('ใบสั่งซื้อ'));
 
+      // Sheet 4 — ใบสั่งซื้อล่าสุด (poSummary.recent), only when present.
+      const recent = report.poSummary?.recent || [];
+      if (recent.length > 0) {
+        const recentHeader = ['เลขที่ใบสั่งซื้อ', 'โครงการ', 'สถานะ', 'จำนวนรายการ'];
+        const recentRows = recent.map((po) => ({
+          เลขที่ใบสั่งซื้อ: po.po_number,
+          โครงการ: po.project_name,
+          สถานะ: resolvePOStatus(po.status).th,
+          จำนวนรายการ: Number(po.item_count) || 0,
+        }));
+        const wsRecent = XLSX.utils.json_to_sheet(recentRows, { header: recentHeader });
+        XLSX.utils.book_append_sheet(wb, wsRecent, sanitizeSheetName('ใบสั่งซื้อล่าสุด'));
+      }
+
       XLSX.writeFile(wb, `sfcmes-report-${fileStamp()}.xlsx`);
     } catch {
       showToast('ไม่สามารถสร้างไฟล์ Excel ได้', 'error');
