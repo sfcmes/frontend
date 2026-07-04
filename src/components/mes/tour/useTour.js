@@ -3,6 +3,24 @@
 // Rendering (spotlight, card, waitFor auto-advance) lives in GuidedTour.jsx.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+// localStorage can throw (Safari private mode, storage disabled, quota) — guard
+// both access paths so a failing write never strands the tour overlay open.
+function readSeen(storageKey) {
+  try {
+    return localStorage.getItem(storageKey);
+  } catch {
+    return null;
+  }
+}
+
+function writeSeen(storageKey) {
+  try {
+    localStorage.setItem(storageKey, '1');
+  } catch {
+    // Swallow — inability to persist the seen flag must not block dismissal.
+  }
+}
+
 export function useTour({ storageKey, steps, state, autoStartDelay = 500 }) {
   const [open, setOpen] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -18,14 +36,15 @@ export function useTour({ storageKey, steps, state, autoStartDelay = 500 }) {
 
   // Auto-start once per browser on first visit (delay lets layout settle).
   useEffect(() => {
-    if (localStorage.getItem(storageKey)) return undefined;
+    if (readSeen(storageKey)) return undefined;
     const t = setTimeout(() => setOpen(true), autoStartDelay);
     return () => clearTimeout(t);
   }, [storageKey, autoStartDelay]);
 
   const close = useCallback(() => {
     // Dismissing counts as seen — never auto-nag again; ❓ replays on demand.
-    localStorage.setItem(storageKey, '1');
+    // writeSeen swallows storage failures so the overlay always closes.
+    writeSeen(storageKey);
     setOpen(false);
     setStepIndex(0);
   }, [storageKey]);
