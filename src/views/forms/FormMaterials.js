@@ -50,17 +50,21 @@ const TOUR_STEPS = [
     title: 'สองแท็บหลัก',
     body: '"ทะเบียนวัสดุ" คือรายการวัสดุทั้งหมดที่สั่งซื้อได้ ส่วน "สูตรวัสดุ" คือกติกาแปลงชิ้นงานเป็นยอดวัสดุที่ต้องใช้',
   },
+  // Do NOT gate these two on s.tab: when a replay starts from the recipes tab their
+  // data-tour targets are simply absent from the DOM, and GuidedTour's element-not-found
+  // grace skip handles them. Gating on tab would instead shrink the eligible list BEHIND
+  // the live index mid-tour (during 'switch-recipes'), skipping later steps like 'create-recipe'.
   {
     id: 'materials-table',
     target: 'materials-table',
-    when: (s) => s.tab === 'materials' && s.hasMaterials,
+    when: (s) => s.hasMaterials,
     title: 'ทะเบียนวัสดุ',
     body: 'แต่ละแถวคือวัสดุ 1 รายการ: รหัส หน่วย ขนาดแพ็ค สั่งขั้นต่ำ ผู้ขายหลัก และสถานะใช้งาน',
   },
   {
     id: 'add-material',
     target: 'add-material',
-    when: (s) => s.tab === 'materials' && s.isBuyer,
+    when: (s) => s.isBuyer,
     title: 'เพิ่มวัสดุ',
     body: 'กดปุ่มนี้เพื่อเพิ่มวัสดุใหม่ — แก้ไขหรือปิดใช้งานวัสดุเดิมได้จากปุ่มท้ายแถว',
   },
