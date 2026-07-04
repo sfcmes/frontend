@@ -908,6 +908,10 @@ export const sendAiChat = (messages) => api.post('/ai/chat', { messages }, { tim
 export const fetchAiRiskAnalysis = () => api.get('/ai/risk-analysis');
 export const fetchAiDefectAnalysis = () => api.get('/ai/defect-analysis', { timeout: 60000 });
 
+// Production report (F5). Aggregated stats + best-effort GLM narrative; the
+// narrative call can be slow, so allow a generous timeout.
+export const fetchAiReport = (params) => api.get('/ai/report', { params, timeout: 60000 });
+
 export {
   api,
   publicApi,

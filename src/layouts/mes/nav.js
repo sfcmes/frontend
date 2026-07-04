@@ -10,6 +10,7 @@ export const NAV_SECTIONS = [
       { id: 'materials', icon: 'cube', title: 'วัสดุและสูตร', path: '/forms/form-materials' },
       { id: 'material-requirements', icon: 'clipboard-check', title: 'คำนวณวัสดุ', path: '/forms/form-material-requirements' },
       { id: 'ai-chat', icon: 'message-chatbot', title: 'ผู้ช่วย AI', path: '/ai/chat' },
+      { id: 'ai-report', icon: 'report', title: 'รายงานการผลิต', path: '/ai/report' },
     ],
   },
   {

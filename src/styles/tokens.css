@@ -282,3 +282,36 @@
     .mes-cine-prehide [data-login-panel] { opacity: 0; }
   }
 }
+
+/* [MES] Print — the repo's first-ever print styling (F5 production report).
+   PRINT-ONLY EXCEPTION to the dark theme: hex values below are LEGAL because
+   tokens.css is the one hex-permitted file (ADR-0006 governs on-screen colors
+   only; see decisions log). On paper the dark industrial UI becomes plain
+   white with black ink; app chrome (sidebar/bottom-nav/topbar/floating chat
+   launcher) and the page's own controls (.print-hide) are removed so only the
+   report body prints. Status colors inside StatusBadge/charts use CSS-var hues
+   that stay legible on white and are intentionally NOT overridden. */
+@media print {
+  html, body { background: #fff !important; color: #000 !important; }
+
+  /* App chrome never prints. Sidebar is <aside>, bottom nav + menu is <nav>,
+     the breadcrumb topbar is <header>; any fixed overlay (chat launcher/sheet,
+     toasts) is position:fixed via Tailwind's .fixed utility. */
+  aside, header, nav, .fixed, .print-hide { display: none !important; }
+
+  /* Let the full report flow across pages instead of clipping to the shell's
+     one-screen scroll container. */
+  .h-dvh { height: auto !important; }
+  main { overflow: visible !important; height: auto !important; }
+
+  /* Dark surfaces → white paper; keep thin readable rules. */
+  .mes-card { background: #fff !important; border-color: #ccc !important; }
+  table, .mes-th, .mes-td { border-color: #ccc !important; }
+  .mes-th { color: #333 !important; }
+
+  /* Force theme text tokens to ink so muted greys stay readable on white. */
+  .text-mes-text, .text-mes-muted { color: #000 !important; }
+
+  /* Avoid splitting cards/table rows across page breaks where possible. */
+  .mes-card, tr { break-inside: avoid; }
+}

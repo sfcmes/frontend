@@ -25,6 +25,7 @@ const FormComponentCard = Loadable(lazy(() => import('../views/forms/FormCompone
 
 // AI assistant
 const AiChatPage = Loadable(lazy(() => import('../views/mes/ai/AiChatPage')));
+const AiReportPage = Loadable(lazy(() => import('../views/mes/ai/AiReportPage')));
 
 // authentication
 const Register = Loadable(lazy(() => import('../views/authentication/auth1/Register')));
@@ -66,6 +67,7 @@ const Router = [
       { path: '/forms/form-material-requirements', element: <FormMaterialRequirements /> },
       { path: '/pages/qr-code', element: <QRCodePage /> },
       { path: '/ai/chat', element: <AiChatPage /> },
+      { path: '/ai/report', element: <AiReportPage /> },
     ],
   },
 
