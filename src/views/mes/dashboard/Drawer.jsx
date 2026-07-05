@@ -359,6 +359,13 @@ export function ProjectDrawer({ project, onClose, onDataLoaded, onStatusUpdated 
   const [loading, setLoading] = useState(false);
   const [pos, setPos] = useState([]);
   const [piece, setPiece] = useState(null);
+  const [expanded, setExpanded] = useState(() => {
+    try { return sessionStorage.getItem('mes.drawer.expanded') === '1'; } catch { return false; }
+  });
+  const toggleExpanded = () => setExpanded((e) => {
+    try { sessionStorage.setItem('mes.drawer.expanded', e ? '' : '1'); } catch { /* private mode */ }
+    return !e;
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -438,7 +445,9 @@ export function ProjectDrawer({ project, onClose, onDataLoaded, onStatusUpdated 
   return createPortal(
     <div className="fixed inset-0 z-50 flex justify-end bg-black/60" onClick={onClose}>
       <div
-        className="relative flex h-full w-full flex-col bg-mes-surface md:max-w-2xl md:border-l md:border-mes-border shadow-overlay"
+        className={`relative flex h-full w-full flex-col bg-mes-surface md:border-l md:border-mes-border shadow-overlay transition-[max-width] duration-300 ${
+          expanded ? 'md:max-w-[min(1400px,95vw)]' : 'md:max-w-2xl'
+        }`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -453,6 +462,13 @@ export function ProjectDrawer({ project, onClose, onDataLoaded, onStatusUpdated 
                 <Icon name="user" size={13} /> {p.mgr}
               </div>
             </div>
+            <button
+              className="mes-btn mes-btn-ghost !min-h-touch !px-3 shrink-0 hidden md:inline-flex"
+              onClick={toggleExpanded}
+              aria-label={expanded ? 'ย่อหน้าต่าง' : 'ขยายหน้าต่าง'}
+            >
+              <Icon name={expanded ? 'minimize' : 'maximize'} size={18} />
+            </button>
             <button className="mes-btn mes-btn-ghost !min-h-touch !px-3 shrink-0" onClick={onClose} aria-label="ปิด">
               <Icon name="x" size={18} />
             </button>
