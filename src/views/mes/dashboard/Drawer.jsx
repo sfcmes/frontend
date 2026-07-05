@@ -11,7 +11,7 @@ import { Donut, PipelineBar, Timeline } from 'src/components/mes/charts';
 import { StatusBadge } from 'src/components/mes/StatusBadge';
 import {
   COMPONENT_STATUS, PIPE_ORDER, resolveComponentStatus,
-  emptyStatus, fmt, pct,
+  emptyStatus, fmt, pct, toCumulativeStatus,
 } from 'src/components/mes/status-meta';
 import { EmptyState, Modal, Spinner } from 'src/components/mes/ui';
 import {
@@ -208,7 +208,17 @@ function SectionGroup({ section, pieces, open, onToggle, onPiece, matchCount = n
   const [limit, setLimit] = useState(TILE_LIMIT_INITIAL);
   useEffect(() => { if (open) setLimit(TILE_LIMIT_INITIAL); }, [open, section.id]);
 
-  const activeStatuses = PIPE_ORDER.filter((k) => (section.status[k] || 0) > 0);
+  // Milestone counts are cumulative (same semantics as the Hero cards);
+  // planning/rejected stay raw and appear only when non-zero.
+  const cum = toCumulativeStatus(section.status);
+  const summary = [
+    ...(section.status.planning > 0 ? [{ k: 'planning', n: section.status.planning }] : []),
+    { k: 'manufactured', n: cum.manufactured },
+    { k: 'transported', n: cum.transported },
+    { k: 'accepted', n: cum.accepted },
+    { k: 'installed', n: cum.installed },
+    ...(section.status.rejected > 0 ? [{ k: 'rejected', n: section.status.rejected }] : []),
+  ];
 
   return (
     <div className="rounded-md border border-mes-border">
@@ -226,16 +236,16 @@ function SectionGroup({ section, pieces, open, onToggle, onPiece, matchCount = n
       </button>
       {open && (
         <div className="border-t border-mes-border">
-          {activeStatuses.length > 0 && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 pt-2.5">
-              {activeStatuses.map((k) => (
-                <span key={k} className="inline-flex items-center gap-1.5">
-                  <StatusBadge status={k} size="sm" />
-                  <span className="text-xs font-semibold tabular-nums">{fmt(section.status[k])}</span>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 pt-2.5">
+            {summary.map(({ k, n }) => (
+              <span key={k} className="inline-flex items-center gap-1.5">
+                <StatusBadge status={k} size="sm" />
+                <span className="text-xs font-semibold tabular-nums">
+                  {fmt(n)} <span className="font-normal text-mes-muted">({pct(n, section.total).toFixed(0)}%)</span>
                 </span>
-              ))}
-            </div>
-          )}
+              </span>
+            ))}
+          </div>
           {pieces === null || pieces === undefined ? (
             <Spinner label="กำลังโหลดชิ้นงาน…" />
           ) : pieces.length === 0 ? (
