@@ -4,10 +4,33 @@ import { resolveComponentStatus, resolvePOStatus, resolveSemStatus, statusColor 
 
 const RESOLVERS = { component: resolveComponentStatus, po: resolvePOStatus, sem: resolveSemStatus };
 
-export function StatusBadge({ status, kind = 'component', variant = 'pill', size = 'md', className = '' }) {
+export function StatusBadge({
+  status, kind = 'component', variant = 'pill', size = 'md', className = '',
+  onClick, 'aria-label': ariaLabel, children,
+}) {
   const meta = (RESOLVERS[kind] || resolveComponentStatus)(status);
   const color = statusColor(meta);
   const dashed = kind === 'po' && status === 'draft';
+
+  // Tile: status-colored piece cell for dense grids (dashboard drawer). Whole tile is the button.
+  if (variant === 'tile') {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={ariaLabel}
+        title={meta.th}
+        className={`flex min-h-touch min-w-0 items-center justify-center rounded-sm px-1 text-sm font-semibold tabular-nums ${className}`}
+        style={{
+          color,
+          background: `color-mix(in srgb, ${color} 13%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${color} 45%, transparent)`,
+        }}
+      >
+        <span className="truncate">{children}</span>
+      </button>
+    );
+  }
 
   if (variant === 'dot') {
     return (
