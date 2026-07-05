@@ -202,18 +202,16 @@ function PieceDetail({ piece, project, onClose, onStatusUpdated }) {
   );
 }
 
-/* ---- Collapsible section with piece list ---- */
-function SectionGroup({ section, open, onToggle, onPiece }) {
-  const [limit, setLimit] = useState(40);
-  const [pieces, setPieces] = useState(null);
+/* ---- Pieces tab: per-section accordion with status-colored tile grid ---- */
+const TILE_LIMIT_INITIAL = 120;
+const TILE_LIMIT_STEP = 240;
 
-  useEffect(() => {
-    if (!open) return;
-    fetchComponentsBySectionId(section.id)
-      .then((res) => setPieces(Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : [])))
-      .catch(() => setPieces([]));
-    setLimit(40);
-  }, [open, section.id]);
+// matchCount: non-null only while a search query is active — header then shows "พบ N จาก total ชิ้น".
+function SectionGroup({ section, pieces, open, onToggle, onPiece, matchCount = null }) {
+  const [limit, setLimit] = useState(TILE_LIMIT_INITIAL);
+  useEffect(() => { if (open) setLimit(TILE_LIMIT_INITIAL); }, [open, section.id]);
+
+  const activeStatuses = PIPE_ORDER.filter((k) => (section.status[k] || 0) > 0);
 
   return (
     <div className="rounded-md border border-mes-border">
@@ -223,37 +221,45 @@ function SectionGroup({ section, open, onToggle, onPiece }) {
         <span className="hidden min-w-0 grow sm:block">
           <PipelineBar status={section.status} order={PIPE_ORDER} meta={COMPONENT_STATUS} height={7} />
         </span>
-        <span className="ml-auto shrink-0 text-xs text-mes-muted tabular-nums sm:ml-0">{fmt(section.total)} ชิ้น</span>
+        <span className="ml-auto shrink-0 text-xs text-mes-muted tabular-nums sm:ml-0">
+          {matchCount != null
+            ? `พบ ${fmt(matchCount)} จาก ${fmt(section.total)} ชิ้น`
+            : `${fmt(section.total)} ชิ้น · ${pct(section.status.installed || 0, section.total).toFixed(0)}%`}
+        </span>
       </button>
       {open && (
         <div className="border-t border-mes-border">
-          {pieces === null ? (
+          {activeStatuses.length > 0 && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 pt-2.5">
+              {activeStatuses.map((k) => (
+                <span key={k} className="inline-flex items-center gap-1.5">
+                  <StatusBadge status={k} size="sm" />
+                  <span className="text-xs font-semibold tabular-nums">{fmt(section.status[k])}</span>
+                </span>
+              ))}
+            </div>
+          )}
+          {pieces === null || pieces === undefined ? (
             <Spinner label="กำลังโหลดชิ้นงาน…" />
           ) : pieces.length === 0 ? (
             <EmptyState icon="box" title="ไม่พบชิ้นงาน" />
           ) : (
             <>
-              <div className="flex flex-col">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(72px,1fr))] gap-1.5 p-3">
                 {pieces.slice(0, limit).map((p) => (
-                  <button
+                  <StatusBadge
                     key={p.id}
+                    variant="tile"
+                    status={p.status}
                     onClick={() => onPiece({ ...p, section_name: section.name })}
-                    className="flex min-h-touch w-full items-center gap-2 border-b border-mes-border px-3 py-2 text-left last:border-0 hover:bg-mes-surface-2"
+                    aria-label={`${p.name || p.component_code || p.id} — ${(COMPONENT_STATUS[p.status] || COMPONENT_STATUS.planning).th}`}
                   >
-                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: `var(${resolveComponentStatus(p.status).cssVar})` }} />
-                    <span className="min-w-0 grow">
-                      <span className="block truncate text-sm font-medium">{p.name || p.component_code || p.id}</span>
-                      <span className="block truncate text-xs text-mes-muted">
-                        {p.type || '—'}{p.width && p.height ? ` · ${p.width}×${p.height}×${p.thickness || '—'} มม.` : ''}
-                      </span>
-                    </span>
-                    <StatusBadge status={p.status} size="sm" className="shrink-0" />
-                    <Icon name="chevron-right" size={15} className="shrink-0 text-mes-muted" />
-                  </button>
+                    {p.name || p.component_code || '—'}
+                  </StatusBadge>
                 ))}
               </div>
               {pieces.length > limit && (
-                <button className="mes-btn mes-btn-ghost m-3 w-[calc(100%-24px)]" onClick={() => setLimit((l) => l + 80)}>
+                <button className="mes-btn mes-btn-ghost mx-3 mb-3 w-[calc(100%-24px)]" onClick={() => setLimit((l) => l + TILE_LIMIT_STEP)}>
                   แสดงเพิ่ม ({fmt(pieces.length - limit)} ชิ้น) <Icon name="chevron-down" size={14} />
                 </button>
               )}
@@ -265,13 +271,55 @@ function SectionGroup({ section, open, onToggle, onPiece }) {
   );
 }
 
+function PiecesTab({ sections, total, onPiece }) {
+  const [openSectionId, setOpenSectionId] = useState(sections[0]?.id ?? null);
+  // Cache: sectionId -> undefined (not requested) | null (loading) | array (sorted pieces)
+  const [piecesBySection, setPiecesBySection] = useState({});
+
+  const ensurePieces = (sectionId) => {
+    if (!sectionId) return;
+    setPiecesBySection((prev) => {
+      if (prev[sectionId] !== undefined) return prev;
+      fetchComponentsBySectionId(sectionId)
+        .then((res) => {
+          const rows = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+          rows.sort((a, b) => numericCompare(a.name || a.component_code, b.name || b.component_code));
+          setPiecesBySection((p2) => ({ ...p2, [sectionId]: rows }));
+        })
+        .catch(() => setPiecesBySection((p2) => ({ ...p2, [sectionId]: [] })));
+      return { ...prev, [sectionId]: null };
+    });
+  };
+
+  useEffect(() => { ensurePieces(openSectionId); }, [openSectionId]);
+
+  return (
+    <div className="p-4 md:p-5">
+      <div className="mb-2 text-xs text-mes-muted tabular-nums">
+        {fmt(sections.length)} ชั้น · {fmt(total)} ชิ้นงาน
+      </div>
+      <div className="flex flex-col gap-2">
+        {sections.map((s) => (
+          <SectionGroup
+            key={s.id}
+            section={s}
+            pieces={piecesBySection[s.id]}
+            open={openSectionId === s.id}
+            onToggle={() => setOpenSectionId(openSectionId === s.id ? null : s.id)}
+            onPiece={onPiece}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ---- Main drawer ---- */
 export function ProjectDrawer({ project, onClose, onDataLoaded, onStatusUpdated }) {
   const [tab, setTab] = useState('overview');
   const [fullProject, setFullProject] = useState(null);
   const [loading, setLoading] = useState(false);
   const [pos, setPos] = useState([]);
-  const [openSectionId, setOpenSectionId] = useState(null);
   const [piece, setPiece] = useState(null);
   const navigate = useNavigate();
 
@@ -328,7 +376,6 @@ export function ProjectDrawer({ project, onClose, onDataLoaded, onStatusUpdated 
 
         const enriched = { ...project, sections: enrichedSections, status: aggStatus, total };
         setFullProject(enriched);
-        setOpenSectionId(enrichedSections[0]?.id ?? null);
         if (onDataLoaded) onDataLoaded(enriched);
       } catch {
         setFullProject(project);
@@ -458,22 +505,7 @@ export function ProjectDrawer({ project, onClose, onDataLoaded, onStatusUpdated 
           )}
 
           {!loading && tab === 'pieces' && (
-            <div className="p-4 md:p-5">
-              <div className="mb-2 text-xs text-mes-muted tabular-nums">
-                {fmt(p.sections.length)} ชั้น · {fmt(p.total)} ชิ้นงาน
-              </div>
-              <div className="flex flex-col gap-2">
-                {p.sections.map((s) => (
-                  <SectionGroup
-                    key={s.id}
-                    section={s}
-                    open={openSectionId === s.id}
-                    onToggle={() => setOpenSectionId(openSectionId === s.id ? null : s.id)}
-                    onPiece={setPiece}
-                  />
-                ))}
-              </div>
-            </div>
+            <PiecesTab key={p.id} sections={p.sections} total={p.total} onPiece={setPiece} />
           )}
 
           {!loading && tab === 'po' && (
