@@ -1,77 +1,15 @@
 // [MES] SitePhotos — project site photo gallery + fullscreen lightbox.
 // Data calls identical to the previous implementation (public read, auth write).
 import { useState, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { Icon } from 'src/components/mes/Icon';
+import { ImageLightbox } from 'src/components/mes/ImageLightbox';
 import { ConfirmDialog, useToast, EmptyState } from 'src/components/mes/ui';
 import { publicApi, api, deleteProjectImage } from 'src/utils/api';
-
-function Lightbox({ images, index, onClose, onNav, canManage, onDelete }) {
-  const [confirmOpen, setConfirmOpen] = useState(false);
-
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowLeft') onNav(-1);
-      if (e.key === 'ArrowRight') onNav(1);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, onNav]);
-
-  const img = images[index];
-  if (!img) return null;
-
-  return createPortal(
-    <div className="fixed inset-0 z-[70] flex flex-col bg-black/90" onClick={onClose}>
-      <div className="flex items-center gap-2 p-3" onClick={(e) => e.stopPropagation()}>
-        <span className="text-xs text-mes-muted tabular-nums">{index + 1} / {images.length}</span>
-        <span className="grow" />
-        {canManage && (
-          <button className="mes-btn mes-btn-danger !min-h-touch" onClick={() => setConfirmOpen(true)}>
-            <Icon name="trash" size={16} /> ลบรูป
-          </button>
-        )}
-        <button className="mes-btn mes-btn-ghost !min-h-touch" onClick={onClose} aria-label="ปิด">
-          <Icon name="x" size={18} />
-        </button>
-      </div>
-      <div className="relative flex min-h-0 grow items-center justify-center p-2" onClick={(e) => e.stopPropagation()}>
-        <button
-          className="absolute left-2 z-10 flex min-h-touch min-w-touch items-center justify-center rounded-full bg-mes-surface/70 text-mes-text"
-          onClick={() => onNav(-1)} aria-label="รูปก่อนหน้า"
-        >
-          <Icon name="chevron-left" size={22} />
-        </button>
-        <img
-          src={img.image_url}
-          alt={`รูปไซต์งาน ${index + 1}`}
-          className="max-h-full max-w-full object-contain"
-        />
-        <button
-          className="absolute right-2 z-10 flex min-h-touch min-w-touch items-center justify-center rounded-full bg-mes-surface/70 text-mes-text"
-          onClick={() => onNav(1)} aria-label="รูปถัดไป"
-        >
-          <Icon name="chevron-right" size={22} />
-        </button>
-      </div>
-      <ConfirmDialog
-        open={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        onConfirm={() => { setConfirmOpen(false); onDelete(img); }}
-        title="ลบรูป"
-        message="คุณแน่ใจว่าต้องการลบรูปนี้หรือไม่?"
-        confirmLabel="ลบรูป"
-        danger
-      />
-    </div>,
-    document.body,
-  );
-}
 
 export function SitePhotos({ project, userRole }) {
   const [images, setImages] = useState([]);
   const [lightbox, setLightbox] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const { showToast, toastNode } = useToast();
 
@@ -149,15 +87,34 @@ export function SitePhotos({ project, userRole }) {
       )}
 
       {lightbox !== null && (
-        <Lightbox
-          images={images}
+        <ImageLightbox
+          images={images.map((im, i) => ({ id: im.id, src: im.image_url, alt: `รูปไซต์งาน ${i + 1}` }))}
           index={lightbox}
           onClose={() => setLightbox(null)}
           onNav={(d) => setLightbox((i) => (i + d + images.length) % images.length)}
-          canManage={canManage}
-          onDelete={handleDelete}
+          actions={
+            canManage ? (
+              <button
+                className="mes-btn mes-btn-danger !min-h-touch max-md:!min-w-touch max-md:!px-2"
+                onClick={() => setConfirmOpen(true)}
+                aria-label="ลบรูป"
+              >
+                <Icon name="trash" size={16} /> <span className="max-md:hidden">ลบรูป</span>
+              </button>
+            ) : null
+          }
         />
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={() => { setConfirmOpen(false); handleDelete(images[lightbox]); }}
+        title="ลบรูป"
+        message="คุณแน่ใจว่าต้องการลบรูปนี้หรือไม่?"
+        confirmLabel="ลบรูป"
+        danger
+      />
       {toastNode}
     </div>
   );

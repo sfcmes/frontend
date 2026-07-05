@@ -11,6 +11,8 @@ export const ICON_PATHS = {
   'user-plus': 'M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0 M16 19h6 M19 16v6 M6 21v-2a4 4 0 0 1 4 -4h4',
   'menu-2': 'M4 6l16 0 M4 12l16 0 M4 18l16 0',
   'search': 'M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0 M21 21l-6 -6',
+  'zoom-in': 'M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0 M7 10l6 0 M10 7l0 6 M21 21l-6 -6',
+  'zoom-out': 'M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0 M7 10l6 0 M21 21l-6 -6',
   'chevron-down': 'M6 9l6 6l6 -6',
   'chevron-up': 'M6 15l6 -6l6 6',
   'chevron-right': 'M9 6l6 6l-6 6',
