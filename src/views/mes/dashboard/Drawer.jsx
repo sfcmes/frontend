@@ -13,7 +13,7 @@ import {
   COMPONENT_STATUS, PIPE_ORDER, resolveComponentStatus,
   emptyStatus, fmt, pct,
 } from 'src/components/mes/status-meta';
-import { EmptyState, Spinner } from 'src/components/mes/ui';
+import { EmptyState, Modal, Spinner } from 'src/components/mes/ui';
 import {
   fetchSectionsByProjectId, fetchComponentsByProjectId, updateComponentStatus,
   fetchComponentsBySectionId, fetchComponentById, fetchPOsByProject,
@@ -73,132 +73,129 @@ function PieceDetail({ piece, project, onClose, onStatusUpdated }) {
   );
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col bg-mes-surface">
-      <div className="flex items-center gap-3 border-b border-mes-border px-4 py-3">
-        <button className="mes-btn mes-btn-ghost !min-h-touch !px-3" onClick={onClose}>
-          <Icon name="arrow-left" size={17} /> กลับ
-        </button>
-        <div className="min-w-0 grow">
-          <div className="truncate font-semibold">{piece.name || piece.code || piece.component_code || '—'}</div>
-          <div className="text-xs text-mes-muted">{piece.type || 'ชิ้นงานพรีคาสท์'}</div>
-        </div>
-        <StatusBadge status={piece.status} />
+    <Modal
+      open
+      onClose={onClose}
+      title={piece.name || piece.code || piece.component_code || '—'}
+      wide
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-mes-muted">{piece.type || 'ชิ้นงานพรีคาสท์'}</span>
+        <StatusBadge status={piece.status} className="ml-auto" />
       </div>
 
-      <div className="min-h-0 grow overflow-y-auto p-4">
-        <div className="flex flex-col items-center gap-3 rounded-md border border-mes-border p-4 sm:flex-row">
-          <div className="rounded-sm bg-mes-text p-2">
-            <QRCodeSVG value={uuid} size={110} bgColor="var(--mes-text)" fgColor="var(--mes-bg)" />
+      <div className="flex flex-col items-center gap-3 rounded-md border border-mes-border p-4 sm:flex-row">
+        <div className="rounded-sm bg-mes-text p-2">
+          <QRCodeSVG value={uuid} size={110} bgColor="var(--mes-text)" fgColor="var(--mes-bg)" />
+        </div>
+        <div className="w-full min-w-0 text-sm">
+          <div className="flex justify-between gap-3 border-b border-mes-border py-1.5">
+            <span className="text-mes-muted">รหัสชิ้นงาน</span>
+            <b className="truncate">{piece.name || piece.code || '—'}</b>
           </div>
-          <div className="w-full min-w-0 text-sm">
-            <div className="flex justify-between gap-3 border-b border-mes-border py-1.5">
-              <span className="text-mes-muted">รหัสชิ้นงาน</span>
-              <b className="truncate">{piece.name || piece.code || '—'}</b>
-            </div>
-            <div className="flex justify-between gap-3 border-b border-mes-border py-1.5">
-              <span className="text-mes-muted">ID</span>
-              <b className="truncate font-mono text-xs">{String(piece.id || '').slice(0, 18) || '—'}</b>
-            </div>
-            <div className="flex justify-between gap-3 py-1.5">
-              <span className="text-mes-muted">โครงการ</span>
-              <b className="truncate">{project.code}</b>
-            </div>
+          <div className="flex justify-between gap-3 border-b border-mes-border py-1.5">
+            <span className="text-mes-muted">ID</span>
+            <b className="truncate font-mono text-xs">{String(piece.id || '').slice(0, 18) || '—'}</b>
+          </div>
+          <div className="flex justify-between gap-3 py-1.5">
+            <span className="text-mes-muted">โครงการ</span>
+            <b className="truncate">{project.code}</b>
           </div>
         </div>
+      </div>
 
-        <div className="mt-4 flex gap-1 overflow-x-auto border-b border-mes-border">
-          {SUBS.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setSub(s.id)}
-              className={`flex min-h-touch items-center gap-1.5 whitespace-nowrap border-b-2 px-3 text-sm font-semibold -mb-px ${
-                sub === s.id ? 'border-mes-accent text-mes-accent' : 'border-transparent text-mes-muted'
-              }`}
+      <div className="mt-4 flex gap-1 overflow-x-auto border-b border-mes-border">
+        {SUBS.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => setSub(s.id)}
+            className={`flex min-h-touch items-center gap-1.5 whitespace-nowrap border-b-2 px-3 text-sm font-semibold -mb-px ${
+              sub === s.id ? 'border-mes-accent text-mes-accent' : 'border-transparent text-mes-muted'
+            }`}
+          >
+            <Icon name={s.icon} size={15} /> {s.label}
+          </button>
+        ))}
+      </div>
+
+      {sub === 'detail' && (
+        <div className="mt-3">
+          <div className="text-xs font-semibold text-mes-muted">คุณสมบัติ</div>
+          <div className="mt-1">
+            {prop('cube', 'ประเภทชิ้นงาน', piece.type)}
+            {prop('ruler', 'ขนาด ก×ย×หนา (มม.)', piece.width && piece.height
+              ? `${piece.width} × ${piece.height} × ${piece.thickness || '—'}`
+              : '—')}
+            {prop('photo', 'พื้นที่', piece.area ? `${piece.area} m²` : '—')}
+            {prop('box', 'ปริมาตร', piece.volume ? `${piece.volume} m³` : '—')}
+            {prop('weight', 'น้ำหนัก', piece.weight ? `${piece.weight} ตัน` : '—')}
+            {prop('hash', 'ชั้น / Section', piece.section_name || '—')}
+          </div>
+
+          <div className="mt-4 text-xs font-semibold text-mes-muted">อัปเดตสถานะ</div>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+            <select
+              className="mes-input sm:max-w-xs"
+              value={newStatus}
+              onChange={(e) => { setNewStatus(e.target.value); setSaved(false); setSaveError(null); }}
             >
-              <Icon name={s.icon} size={15} /> {s.label}
+              {PIPE_ORDER.map((k) => (
+                <option key={k} value={k}>{COMPONENT_STATUS[k].th}</option>
+              ))}
+            </select>
+            <button
+              className="mes-btn mes-btn-primary"
+              onClick={handleSave}
+              disabled={saving || (newStatus === piece.status && !saved)}
+            >
+              <Icon name="circle-check" size={15} /> {saving ? 'กำลังบันทึก…' : 'อัปเดตสถานะ'}
             </button>
-          ))}
+          </div>
+          {saved && !saveError && (
+            <div className="mt-2 flex items-center gap-2 rounded-sm border border-sem-success px-3 py-2 text-sm text-sem-success">
+              <Icon name="circle-check" size={15} />
+              บันทึกแล้ว — สถานะใหม่: {COMPONENT_STATUS[newStatus]?.th}
+            </div>
+          )}
+          {saveError && (
+            <div className="mt-2 flex items-center gap-2 rounded-sm border border-sem-danger px-3 py-2 text-sm text-sem-danger">
+              <Icon name="circle-x" size={15} />
+              {saveError}
+            </div>
+          )}
         </div>
+      )}
 
-        {sub === 'detail' && (
-          <div className="mt-3">
-            <div className="text-xs font-semibold text-mes-muted">คุณสมบัติ</div>
-            <div className="mt-1">
-              {prop('cube', 'ประเภทชิ้นงาน', piece.type)}
-              {prop('ruler', 'ขนาด ก×ย×หนา (มม.)', piece.width && piece.height
-                ? `${piece.width} × ${piece.height} × ${piece.thickness || '—'}`
-                : '—')}
-              {prop('photo', 'พื้นที่', piece.area ? `${piece.area} m²` : '—')}
-              {prop('box', 'ปริมาตร', piece.volume ? `${piece.volume} m³` : '—')}
-              {prop('weight', 'น้ำหนัก', piece.weight ? `${piece.weight} ตัน` : '—')}
-              {prop('hash', 'ชั้น / Section', piece.section_name || '—')}
-            </div>
+      {sub === 'history' && (
+        <div className="mt-3">
+          {histLoading ? (
+            <Spinner />
+          ) : (
+            <Timeline
+              items={(history && history.length > 0
+                ? history
+                : [{ status: piece.status, updated_at: null, updated_by: 'ระบบ' }]
+              ).map((h, i) => {
+                const hm = resolveComponentStatus(h.status);
+                return {
+                  meta: hm,
+                  title: hm.th,
+                  sub: h.updated_at
+                    ? new Date(h.updated_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
+                    : '—',
+                  by: h.updated_by || '—',
+                  current: i === 0,
+                };
+              })}
+            />
+          )}
+        </div>
+      )}
 
-            <div className="mt-4 text-xs font-semibold text-mes-muted">อัปเดตสถานะ</div>
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <select
-                className="mes-input sm:max-w-xs"
-                value={newStatus}
-                onChange={(e) => { setNewStatus(e.target.value); setSaved(false); setSaveError(null); }}
-              >
-                {PIPE_ORDER.map((k) => (
-                  <option key={k} value={k}>{COMPONENT_STATUS[k].th}</option>
-                ))}
-              </select>
-              <button
-                className="mes-btn mes-btn-primary"
-                onClick={handleSave}
-                disabled={saving || (newStatus === piece.status && !saved)}
-              >
-                <Icon name="circle-check" size={15} /> {saving ? 'กำลังบันทึก…' : 'อัปเดตสถานะ'}
-              </button>
-            </div>
-            {saved && !saveError && (
-              <div className="mt-2 flex items-center gap-2 rounded-sm border border-sem-success px-3 py-2 text-sm text-sem-success">
-                <Icon name="circle-check" size={15} />
-                บันทึกแล้ว — สถานะใหม่: {COMPONENT_STATUS[newStatus]?.th}
-              </div>
-            )}
-            {saveError && (
-              <div className="mt-2 flex items-center gap-2 rounded-sm border border-sem-danger px-3 py-2 text-sm text-sem-danger">
-                <Icon name="circle-x" size={15} />
-                {saveError}
-              </div>
-            )}
-          </div>
-        )}
-
-        {sub === 'history' && (
-          <div className="mt-3">
-            {histLoading ? (
-              <Spinner />
-            ) : (
-              <Timeline
-                items={(history && history.length > 0
-                  ? history
-                  : [{ status: piece.status, updated_at: null, updated_by: 'ระบบ' }]
-                ).map((h, i) => {
-                  const hm = resolveComponentStatus(h.status);
-                  return {
-                    meta: hm,
-                    title: hm.th,
-                    sub: h.updated_at
-                      ? new Date(h.updated_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
-                      : '—',
-                    by: h.updated_by || '—',
-                    current: i === 0,
-                  };
-                })}
-              />
-            )}
-          </div>
-        )}
-
-        {sub === 'files' && (
-          <EmptyState icon="file-text" title="ยังไม่มีไฟล์" />
-        )}
-      </div>
-    </div>
+      {sub === 'files' && (
+        <EmptyState icon="file-text" title="ยังไม่มีไฟล์" />
+      )}
+    </Modal>
   );
 }
 
