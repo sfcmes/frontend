@@ -68,6 +68,7 @@ export function useAiChat() {
         links: data.links,
         charts: data.charts,
         datasets: data.datasets,
+        suggestions: data.suggestions,
         ts: Date.now(),
       }]);
     } catch (err) {

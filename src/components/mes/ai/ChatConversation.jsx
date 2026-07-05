@@ -49,6 +49,14 @@ export function ChatConversation({ messages, pending, onSend, onNavigate }) {
 
   const isEmpty = messages.length === 0;
 
+  // Follow-up chips — only under the LATEST reply, never on errors, hidden while
+  // the next answer is in flight (a new user message makes them vanish naturally).
+  const last = messages[messages.length - 1];
+  const followUps =
+    !pending && last && last.role === 'assistant' && !last.error && Array.isArray(last.suggestions)
+      ? last.suggestions
+      : [];
+
   return (
     <div className="flex min-h-0 grow flex-col">
       <div ref={scrollRef} className="min-h-0 grow overflow-y-auto px-3 py-4 md:px-5">
@@ -73,6 +81,15 @@ export function ChatConversation({ messages, pending, onSend, onNavigate }) {
               <ChatMessage key={m.id} message={m} onNavigate={onNavigate} />
             ))}
             {pending && <TypingIndicator />}
+            {followUps.length > 0 && (
+              <div className="flex flex-wrap gap-2 pl-7">
+                {followUps.map((s) => (
+                  <button key={s} type="button" className="mes-btn mes-btn-ghost text-xs" onClick={() => onSend(s)}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
