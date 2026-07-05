@@ -7,6 +7,7 @@ import { Icon } from 'src/components/mes/Icon';
 import { useAiChat } from './useAiChat';
 import { ChatConversation } from './ChatConversation';
 import { AiLockedState } from './AiLockedState';
+import { AiCapabilitiesSheet } from './AiCapabilitiesSheet';
 
 // Slide-over shell — backdrop + panel + header chrome, portalled to body.
 // Shared by the authed chat and the guest locked state so both render the
@@ -50,19 +51,43 @@ function PanelShell({ onClose, headerExtra, children }) {
 // component so the hook (and its network calls) never mounts for guests.
 function AuthedChat({ open, onClose, onOpenFullPage }) {
   const { messages, pending, send } = useAiChat();
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  // AuthedChat stays mounted across panel open/close — don't let a sheet left
+  // open reappear the next time the panel opens.
+  useEffect(() => {
+    if (!open) setHelpOpen(false);
+  }, [open]);
 
   if (!open) return null;
+
+  // Ask a bank question: send it, close the sheet, keep the panel open.
+  const askFromSheet = (question) => {
+    send(question);
+    setHelpOpen(false);
+  };
 
   return (
     <PanelShell
       onClose={onClose}
       headerExtra={
-        <button type="button" className="mes-btn mes-btn-ghost text-xs" onClick={onOpenFullPage}>
-          เปิดแบบเต็มหน้า
-        </button>
+        <>
+          <button
+            type="button"
+            className="mes-btn mes-btn-ghost !min-h-touch !px-3"
+            onClick={() => setHelpOpen(true)}
+            aria-label="ผู้ช่วย AI ทำอะไรได้บ้าง"
+          >
+            <Icon name="help-circle" size={18} />
+          </button>
+          <button type="button" className="mes-btn mes-btn-ghost text-xs" onClick={onOpenFullPage}>
+            เปิดแบบเต็มหน้า
+          </button>
+        </>
       }
     >
       <ChatConversation messages={messages} pending={pending} onSend={send} onNavigate={onClose} />
+      <AiCapabilitiesSheet open={helpOpen} onClose={() => setHelpOpen(false)} onAsk={askFromSheet} />
     </PanelShell>
   );
 }

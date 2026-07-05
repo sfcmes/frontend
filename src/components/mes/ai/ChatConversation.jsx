@@ -3,12 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from 'src/components/mes/Icon';
 import { EmptyState } from 'src/components/mes/ui';
 import { ChatMessage } from './ChatMessage';
-
-const SUGGESTED = [
-  'โครงการไหนคืบหน้าช้าที่สุด?',
-  'สถานะใบสั่งซื้อวัตถุดิบตอนนี้',
-  'มีชิ้นงานถูกปฏิเสธบ้างไหม',
-];
+import { EMPTY_STATE_QUESTIONS } from './questionBank';
 
 // Assistant-style bubble shown while the backend tool loop runs.
 function TypingIndicator() {
@@ -65,7 +60,7 @@ export function ChatConversation({ messages, pending, onSend, onNavigate }) {
               hint="ถามเกี่ยวกับความคืบหน้าโครงการ ใบสั่งซื้อวัตถุดิบ หรือชิ้นงานที่ถูกปฏิเสธ"
             />
             <div className="mt-1 flex flex-wrap justify-center gap-2 px-2">
-              {SUGGESTED.map((s) => (
+              {EMPTY_STATE_QUESTIONS.map((s) => (
                 <button key={s} type="button" className="mes-btn mes-btn-ghost text-xs" onClick={() => onSend(s)}>
                   {s}
                 </button>

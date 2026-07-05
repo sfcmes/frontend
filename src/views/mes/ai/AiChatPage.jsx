@@ -5,10 +5,18 @@ import { Icon } from 'src/components/mes/Icon';
 import { ConfirmDialog } from 'src/components/mes/ui';
 import { useAiChat } from 'src/components/mes/ai/useAiChat';
 import { ChatConversation } from 'src/components/mes/ai/ChatConversation';
+import { AiCapabilitiesSheet } from 'src/components/mes/ai/AiCapabilitiesSheet';
 
 const AiChatPage = () => {
   const { messages, pending, send, clear } = useAiChat();
   const [confirmClear, setConfirmClear] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  // Ask a bank question: send it, close the sheet, stay on the page.
+  const askFromSheet = (question) => {
+    send(question);
+    setHelpOpen(false);
+  };
 
   // Height fills the shell's <main> content box (viewport minus topbar + main
   // padding, and the reserved bottom-nav space below md) so the message list
@@ -19,6 +27,14 @@ const AiChatPage = () => {
         <div className="flex items-center gap-3 px-4 py-3 md:px-5 border-b border-mes-border shrink-0">
           <span className="text-mes-accent"><Icon name="message-chatbot" size={22} /></span>
           <h1 className="text-lg font-semibold text-mes-text flex-1 min-w-0 truncate">ผู้ช่วย AI</h1>
+          <button
+            type="button"
+            className="mes-btn mes-btn-ghost !min-h-touch !px-3"
+            onClick={() => setHelpOpen(true)}
+            aria-label="ผู้ช่วย AI ทำอะไรได้บ้าง"
+          >
+            <Icon name="help-circle" size={18} />
+          </button>
           <button
             type="button"
             className="mes-btn mes-btn-ghost text-xs"
@@ -41,6 +57,8 @@ const AiChatPage = () => {
         confirmLabel="ล้างบทสนทนา"
         danger
       />
+
+      <AiCapabilitiesSheet open={helpOpen} onClose={() => setHelpOpen(false)} onAsk={askFromSheet} />
     </PageContainer>
   );
 };
