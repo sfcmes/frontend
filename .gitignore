@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code tooling / local artifacts
+.claude/
+.agents/
+temp-image/
+premium-documentation/
+skills-lock.json
+sfcmes-frontend-builder.skill
