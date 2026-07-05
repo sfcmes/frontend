@@ -1,5 +1,6 @@
 // [MES] AiInsights — AI risk & defect analysis cards (auth-gated, ADR-0003 locked for guests)
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from 'src/contexts/AuthContext';
 import { Icon } from 'src/components/mes/Icon';
 import { StatusBadge } from 'src/components/mes/StatusBadge';
 import { Spinner } from 'src/components/mes/ui';
@@ -209,6 +210,12 @@ function DefectSkeleton() {
 }
 
 export function AiInsights({ user }) {
+  // While AuthContext is still resolving, `user` is null even for a logged-in
+  // session — showing the guest lock then would flash it briefly. Render plain
+  // pulse skeletons (no lock overlay) until loading settles; fetch-owning cards
+  // still mount only when `user` is truthy, so guests trigger zero /ai/* calls.
+  const { loading } = useAuth();
+
   return (
     <section className="mt-4">
       <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-mes-muted">
@@ -219,6 +226,15 @@ export function AiInsights({ user }) {
           <>
             <RiskCard />
             <DefectCard />
+          </>
+        ) : loading ? (
+          <>
+            <CardFrame icon="alert-triangle" title="วิเคราะห์ความเสี่ยง">
+              <RiskSkeleton />
+            </CardFrame>
+            <CardFrame icon="clipboard-list" title="วิเคราะห์ข้อบกพร่อง">
+              <DefectSkeleton />
+            </CardFrame>
           </>
         ) : (
           <>
