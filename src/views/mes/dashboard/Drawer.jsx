@@ -19,6 +19,10 @@ import {
   fetchComponentsBySectionId, fetchComponentById, fetchPOsByProject,
 } from 'src/utils/api';
 
+// Natural numeric compare for Thai/Latin mixed names: 1, 1R1, 2, … 10 (not 1, 10, 2).
+const numericCompare = (a, b) =>
+  String(a ?? '').localeCompare(String(b ?? ''), 'th', { numeric: true });
+
 /* ---- Per-piece detail overlay ---- */
 function PieceDetail({ piece, project, onClose, onStatusUpdated }) {
   const [sub, setSub] = useState('detail');
@@ -289,7 +293,10 @@ export function ProjectDrawer({ project, onClose, onDataLoaded, onStatusUpdated 
         setPos(poRes.data || []);
 
         const sections = Array.isArray(secRes.data) ? secRes.data : (Array.isArray(secRes) ? secRes : []);
-        const allComps = [...(compRes.precast || []), ...(compRes.other || [])];
+        // Backend returns a plain array; older shape was { precast, other } — accept both.
+        const allComps = Array.isArray(compRes)
+          ? compRes
+          : [...(compRes?.precast || []), ...(compRes?.other || [])];
 
         const secMap = {};
         sections.forEach((s, i) => {
@@ -309,7 +316,7 @@ export function ProjectDrawer({ project, onClose, onDataLoaded, onStatusUpdated 
             if (VALID.includes(st)) secMap[sid].status[st]++;
           }
         });
-        const enrichedSections = Object.values(secMap);
+        const enrichedSections = Object.values(secMap).sort((a, b) => numericCompare(a.name, b.name));
 
         const aggStatus = emptyStatus();
         let total = 0;
