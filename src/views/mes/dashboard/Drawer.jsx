@@ -273,8 +273,10 @@ function SectionGroup({ section, pieces, open, onToggle, onPiece, matchCount = n
 
 function PiecesTab({ sections, total, onPiece }) {
   const [openSectionId, setOpenSectionId] = useState(sections[0]?.id ?? null);
+  const [query, setQuery] = useState('');
   // Cache: sectionId -> undefined (not requested) | null (loading) | array (sorted pieces)
   const [piecesBySection, setPiecesBySection] = useState({});
+  const q = query.trim().toLowerCase();
 
   const ensurePieces = (sectionId) => {
     if (!sectionId) return;
@@ -293,23 +295,59 @@ function PiecesTab({ sections, total, onPiece }) {
 
   useEffect(() => { ensurePieces(openSectionId); }, [openSectionId]);
 
+  // Searching needs every section's pieces — fetch all not-yet-requested sections once.
+  useEffect(() => {
+    if (q) sections.forEach((s) => ensurePieces(s.id));
+  }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pieceLabel = (p) => String(p.name || p.component_code || '').toLowerCase();
+  const visible = sections.map((s) => {
+    const pieces = piecesBySection[s.id];
+    if (!q) return { section: s, pieces, open: openSectionId === s.id };
+    if (pieces === undefined || pieces === null) return { section: s, pieces: null, open: true };
+    const matches = pieces.filter((p) => pieceLabel(p).includes(q));
+    return matches.length === 0 ? null : { section: s, pieces: matches, open: true };
+  }).filter(Boolean);
+
   return (
     <div className="p-4 md:p-5">
-      <div className="mb-2 text-xs text-mes-muted tabular-nums">
-        {fmt(sections.length)} ชั้น · {fmt(total)} ชิ้นงาน
-      </div>
-      <div className="flex flex-col gap-2">
-        {sections.map((s) => (
-          <SectionGroup
-            key={s.id}
-            section={s}
-            pieces={piecesBySection[s.id]}
-            open={openSectionId === s.id}
-            onToggle={() => setOpenSectionId(openSectionId === s.id ? null : s.id)}
-            onPiece={onPiece}
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative grow sm:max-w-xs">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-mes-muted">
+            <Icon name="search" size={15} />
+          </span>
+          <input
+            className="mes-input !pl-9"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="ค้นหาเลขชิ้นงาน…"
+            aria-label="ค้นหาเลขชิ้นงาน"
           />
-        ))}
+        </div>
+        <div className="text-xs text-mes-muted tabular-nums sm:ml-auto">
+          {q
+            ? `พบ ${fmt(visible.reduce((n, v) => n + (v.pieces?.length || 0), 0))} ชิ้น ใน ${fmt(visible.length)} ชั้น`
+            : `${fmt(sections.length)} ชั้น · ${fmt(total)} ชิ้นงาน`}
+        </div>
       </div>
+      {q && visible.length === 0 ? (
+        <EmptyState icon="search" title={`ไม่พบชิ้นงานที่ตรงกับ "${query.trim()}"`} />
+      ) : (
+        <div className="flex flex-col gap-2">
+          {visible.map(({ section, pieces, open }) => (
+            <SectionGroup
+              key={section.id}
+              section={section}
+              pieces={pieces}
+              open={open}
+              onToggle={() => { if (!q) setOpenSectionId(openSectionId === section.id ? null : section.id); }}
+              onPiece={onPiece}
+              matchCount={q ? (pieces?.length ?? null) : null}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
