@@ -132,10 +132,7 @@ const QRCodePage = () => {
     }
   };
 
-  const createQRCodeElement = (component, sectionName, projectName) => {
-    const qrCodeUrl = `${window.location.origin}/forms/form-component-card/${component.id}`;
-    const { paper, ink } = qrColors();
-
+  const buildQRPrintElement = (qrDataUrl, component, sectionName, projectName, paper, ink) => {
     const qrCodeElement = document.createElement('div');
     qrCodeElement.style.backgroundColor = paper;
     qrCodeElement.style.padding = '20px';
@@ -143,24 +140,15 @@ const QRCodePage = () => {
     qrCodeElement.style.textAlign = 'center';
     qrCodeElement.id = 'qrCodeElement';
 
-    const qrCodeContainer = document.createElement('div');
-    qrCodeContainer.style.backgroundColor = paper;
-    qrCodeContainer.style.padding = '10px';
-    qrCodeContainer.style.display = 'inline-block';
-    qrCodeElement.appendChild(qrCodeContainer);
-
-    const qrCodeRoot = createRoot(qrCodeContainer);
-    qrCodeRoot.render(
-      <QRCodeCanvas
-        value={qrCodeUrl}
-        size={256}
-        bgColor={paper}
-        fgColor={ink}
-        level={'Q'}
-        includeMargin
-        imageSettings={{ src: logo, height: 48, width: 48, excavate: true }}
-      />,
-    );
+    // Use an <img> of the QR (not a live <canvas>): html2canvas does not reliably
+    // capture dynamically-drawn canvases, which left the saved/printed image blank.
+    const qrCodeImg = document.createElement('img');
+    qrCodeImg.src = qrDataUrl;
+    qrCodeImg.width = 256;
+    qrCodeImg.height = 256;
+    qrCodeImg.style.backgroundColor = paper;
+    qrCodeImg.style.padding = '10px';
+    qrCodeElement.appendChild(qrCodeImg);
 
     const qrCodeText = document.createElement('p');
     qrCodeText.style.color = ink;
@@ -175,9 +163,55 @@ const QRCodePage = () => {
     <span style="font-size: 16px; font-weight: 700;">ชั้น: ${sectionName || 'N/A'}</span><br />
     <span style="font-size: 16px; font-weight: 800;">ชื่อชิ้นงาน: ${component.name}</span>`;
     qrCodeElement.appendChild(qrCodeText);
+    return qrCodeElement;
+  };
+
+  const createQRCodeElement = (component, sectionName, projectName) => {
+    const qrCodeUrl = `${window.location.origin}/forms/form-component-card/${component.id}`;
+    const { paper, ink } = qrColors();
+
+    // Render the QR into an offscreen container first, then snapshot its canvas to a
+    // data-URL <img> that html2canvas can capture reliably.
+    const temp = document.createElement('div');
+    temp.style.cssText = 'position:fixed;left:-9999px;top:0;';
+    document.body.appendChild(temp);
+    const qrCodeRoot = createRoot(temp);
+    qrCodeRoot.render(
+      <QRCodeCanvas
+        value={qrCodeUrl}
+        size={256}
+        bgColor={paper}
+        fgColor={ink}
+        level={'Q'}
+        includeMargin
+        imageSettings={{ src: logo, height: 48, width: 48, excavate: true }}
+      />,
+    );
 
     return new Promise((resolve) => {
-      setTimeout(() => resolve(qrCodeElement), 100);
+      const started = Date.now();
+      const snapshot = () => {
+        const canvas = temp.querySelector('canvas');
+        if ((!canvas || canvas.width === 0) && Date.now() - started < 3000) {
+          requestAnimationFrame(snapshot);
+          return;
+        }
+        let qrDataUrl = '';
+        try {
+          qrDataUrl = canvas ? canvas.toDataURL('image/png') : '';
+        } catch {
+          /* leave blank if export fails */
+        }
+        qrCodeRoot.unmount();
+        document.body.removeChild(temp);
+
+        const el = buildQRPrintElement(qrDataUrl, component, sectionName, projectName, paper, ink);
+        const img = el.querySelector('img');
+        if (img.complete) resolve(el);
+        else img.onload = () => resolve(el);
+      };
+      // let React mount and the center logo paint into the canvas before snapshotting
+      setTimeout(() => requestAnimationFrame(snapshot), 300);
     });
   };
 
@@ -196,20 +230,28 @@ const QRCodePage = () => {
       });
       canvas.toBlob(
         (blob) => {
+          if (!blob) {
+            document.body.removeChild(qrCodeElement);
+            return;
+          }
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.download = `qr-code-${component.name}.png`;
           link.href = url;
+          // Anchor must be in the DOM for the click to trigger a download in
+          // stricter/mobile browsers; defer revoke so the download isn't cancelled.
+          document.body.appendChild(link);
           link.click();
-          URL.revokeObjectURL(url);
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(url), 10000);
           document.body.removeChild(qrCodeElement);
         },
         'image/png',
         1.0,
       );
       addToHistory('บันทึกแล้ว', component);
-    } catch {
-      /* save failed silently, matching previous behavior */
+    } catch (err) {
+      console.error('QR save failed:', err);
     }
   };
 
@@ -225,11 +267,16 @@ const QRCodePage = () => {
         backgroundColor: qrColors().paper,
       });
       const imgData = canvas.toDataURL('image/png');
+      document.body.removeChild(qrCodeElement);
 
-      const printWindow = window.open('', '', 'width=600,height=600');
-      if (!printWindow) return;
-      printWindow.document.open();
-      printWindow.document.write(`
+      // Print via a hidden iframe rather than window.open — popups opened after an
+      // await are blocked by most browsers (and mobile), which silently killed printing.
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+      document.body.appendChild(iframe);
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(`
         <!DOCTYPE html>
         <html>
         <head>
@@ -243,26 +290,29 @@ const QRCodePage = () => {
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
               }
-              img {
-                display: block;
-                margin: auto;
-                max-width: 100%;
-                height: auto;
-              }
             }
+            img { display: block; margin: auto; max-width: 100%; height: auto; }
           </style>
         </head>
         <body>
-          <img src="${imgData}" onload="window.focus(); window.print();">
+          <img src="${imgData}">
         </body>
         </html>
       `);
-      printWindow.document.close();
+      doc.close();
 
-      document.body.removeChild(qrCodeElement);
+      const img = doc.querySelector('img');
+      const doPrint = () => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+      };
+      if (img.complete) doPrint();
+      else img.onload = doPrint;
+
       addToHistory('พิมพ์แล้ว', component);
-    } catch {
-      /* print failed silently, matching previous behavior */
+    } catch (err) {
+      console.error('QR print failed:', err);
     }
   };
 

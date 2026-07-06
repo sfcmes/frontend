@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SFC MES v3 — Demo Deployment Guide</title>
+<style>
+  :root{
+    --bg:#0f1420; --surface:#171d2b; --surface2:#1e2637; --border:#2a3346;
+    --text:#e6ebf5; --muted:#93a0b8; --accent:#e0a63c; --accent2:#5b9bd5;
+    --ok:#57b894; --warn:#e0a63c; --danger:#e06c6c; --code:#0b0f18;
+    --mono:'SF Mono',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;font-size:15px}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 20px 120px}
+  header{padding:44px 0 20px;border-bottom:1px solid var(--border);margin-bottom:8px}
+  header h1{margin:0 0 6px;font-size:28px;letter-spacing:-.3px}
+  header .sub{color:var(--muted);font-size:15px}
+  header .meta{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12.5px;color:var(--muted)}
+  .chip b{color:var(--text);font-weight:600}
+  nav.toc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin:24px 0}
+  nav.toc h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:32px}
+  nav.toc a{color:var(--accent2);text-decoration:none}
+  nav.toc a:hover{text-decoration:underline}
+  h2{font-size:21px;margin:44px 0 12px;padding-top:14px;border-top:1px solid var(--border);letter-spacing:-.2px}
+  h2 .n{color:var(--accent);font-variant-numeric:tabular-nums;margin-right:10px}
+  h3{font-size:16px;margin:26px 0 8px;color:var(--text)}
+  p{margin:10px 0}
+  a{color:var(--accent2)}
+  code{font-family:var(--mono);background:var(--surface2);padding:1.5px 6px;border-radius:5px;font-size:13px;color:#f0d9a8}
+  pre{background:var(--code);border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow-x:auto;margin:12px 0}
+  pre code{background:none;padding:0;color:#d6deec;font-size:13px;line-height:1.55;display:block}
+  .cmt{color:#5f7089}
+  .k{color:#5b9bd5}
+  .callout{border-radius:10px;padding:12px 16px;margin:14px 0;border:1px solid var(--border);background:var(--surface)}
+  .callout.warn{border-color:#5a4620;background:#211a0e}
+  .callout.danger{border-color:#5a2626;background:#210f0f}
+  .callout.ok{border-color:#245043;background:#0e1f1a}
+  .callout .lbl{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px}
+  .callout.warn .lbl{color:var(--warn)}
+  .callout.danger .lbl{color:var(--danger)}
+  .callout.ok .lbl{color:var(--ok)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  td code{font-size:12.5px}
+  .step{display:flex;gap:14px;margin:16px 0}
+  .step .num{flex:0 0 28px;height:28px;border-radius:50%;background:var(--accent);color:#1a1206;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .step .body{flex:1;min-width:0}
+  .step .body h4{margin:2px 0 6px;font-size:15.5px}
+  footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:.04em}
+  .pill.fe{background:#13324a;color:#7cc0f0}
+  .pill.be{background:#3a2a13;color:#e0b96a}
+  hr{border:none;border-top:1px solid var(--border);margin:28px 0}
+  .lead{font-size:16px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>SFC MES v3 — Demo Deployment Guide</h1>
+  <div class="sub">Customer-demo deployment on AWS Lightsail (Singapore, <code>ap-southeast-1</code>). Manual redeploy reference + record of every issue solved during the first deploy.</div>
+  <div class="meta">
+    <span class="chip">Frontend <b>18.140.71.168</b></span>
+    <span class="chip">Backend <b>54.254.140.44</b></span>
+    <span class="chip">Demo URL <b>http://18.140.71.168/</b></span>
+    <span class="chip">Set up <b>2026-07-07</b></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h3>Contents</h3>
+  <ol>
+    <li><a href="#arch">Architecture</a></li>
+    <li><a href="#infra">Infrastructure reference</a></li>
+    <li><a href="#prereq">Prerequisites &amp; access</a></li>
+    <li><a href="#redeploy">Quick redeploy (do this next time)</a></li>
+    <li><a href="#backend">Full backend deploy</a></li>
+    <li><a href="#frontend">Full frontend deploy</a></li>
+    <li><a href="#s3">S3 bucket setup</a></li>
+    <li><a href="#gotchas">Gotchas &amp; fixes (important)</a></li>
+    <li><a href="#verify">Verification</a></li>
+    <li><a href="#security">Security notes</a></li>
+  </ol>
+</nav>
+
+<h2 id="arch"><span class="n">1</span>Architecture</h2>
+<p class="lead">Two Lightsail instances. The browser only ever talks to the frontend box; the backend is reached <em>through</em> nginx over the internal private network, so backend port 3000 is never exposed to the internet.</p>
+<pre><code>Phone / Browser
+     |  http://18.140.71.168/           (SPA, same-origin /api)
+     v
++-----------------------------+        +------------------------------+
+|  FRONTEND  18.140.71.168     |        |  BACKEND  54.254.140.44      |
+|  nginx :80                   |        |  Node 20 + pm2 "sfc-backend" |
+|  - serves /var/www/sfc-demo  |        |  :3000                       |
+|  - /api/  --proxy-------------------> |  --> dev RDS (Postgres :5432)|
+|    to 172.26.3.252:3000      |private |  --> S3 bucket-sfc-v3-demo   |
++-----------------------------+ network +------------------------------+
+        (public IP)              172.26.x            (public IP + RDS + S3)</code></pre>
+<p>Because the SPA calls <code>/api</code> <b>same-origin</b> (proxied), there is no CORS to configure on the browser side and no second public endpoint.</p>
+
+<h2 id="infra"><span class="n">2</span>Infrastructure reference</h2>
+<table>
+  <tr><th>Item</th><th>Value</th></tr>
+  <tr><td>Frontend host</td><td><code>18.140.71.168</code> (private <code>172.26.15.70</code>) — nginx 1.24</td></tr>
+  <tr><td>Backend host</td><td><code>54.254.140.44</code> (private <code>172.26.3.252</code>) — Node v20.20.2, pm2 7.0.3</td></tr>
+  <tr><td>SSH</td><td>user <code>ubuntu</code>, key <code>/Users/mac/dev/aws-ssh-sfc-v3-demo/sfc-v3-demo.pem</code></td></tr>
+  <tr><td>Web root</td><td><code>/var/www/sfc-demo</code> (frontend)</td></tr>
+  <tr><td>Backend dir</td><td><code>~/sfcmes-backend-v3</code> (on backend box)</td></tr>
+  <tr><td>pm2 process</td><td><code>sfc-backend</code> (auto-starts on reboot via <code>pm2 startup</code>)</td></tr>
+  <tr><td>Database</td><td><b>dev</b> RDS <code>ls-968…rds.amazonaws.com:5432</code>, db <code>sfc_mes_db</code></td></tr>
+  <tr><td>S3 bucket</td><td><code>bucket-sfc-v3-demo</code> (public-read), region <code>ap-southeast-1</code></td></tr>
+  <tr><td>Repos / branches</td><td>frontend <code>re-design</code> · backend <code>feature/ai</code></td></tr>
+</table>
+
+<h2 id="prereq"><span class="n">3</span>Prerequisites &amp; access</h2>
+<div class="step"><div class="num">1</div><div class="body">
+  <h4>SSH key permissions</h4>
+  <pre><code>chmod 600 /Users/mac/dev/aws-ssh-sfc-v3-demo/sfc-v3-demo.pem</code></pre>
+</div></div>
+<div class="step"><div class="num">2</div><div class="body">
+  <h4>Confirm access to both boxes</h4>
+  <pre><code>ssh -i /Users/mac/dev/aws-ssh-sfc-v3-demo/sfc-v3-demo.pem ubuntu@18.140.71.168 hostname
+ssh -i /Users/mac/dev/aws-ssh-sfc-v3-demo/sfc-v3-demo.pem ubuntu@54.254.140.44 hostname</code></pre>
+</div></div>
+<div class="callout warn"><span class="lbl">If SSH says "Permission denied (publickey)"</span>
+The <code>.pem</code> was created <em>after</em> the instances, so its public key isn't in <code>authorized_keys</code>. Fix once via the <b>Lightsail console → instance → Connect → "Connect using SSH"</b> (browser terminal, no key needed) and append the public key:
+<pre><code><span class="cmt"># get the public key locally:</span>
+ssh-keygen -y -f /Users/mac/dev/aws-ssh-sfc-v3-demo/sfc-v3-demo.pem
+<span class="cmt"># paste it into the browser terminal on BOTH boxes:</span>
+echo 'ssh-rsa AAAA...sfc-v3-demo' &gt;&gt; ~/.ssh/authorized_keys</code></pre>
+</div>
+
+<h2 id="redeploy"><span class="n">4</span>Quick redeploy — do this next time</h2>
+<p>Once the boxes are set up (they are), a code change only needs these.</p>
+
+<h3><span class="pill fe">Frontend</span> rebuild &amp; ship</h3>
+<div class="callout danger"><span class="lbl">Critical — the build flag</span>
+You <b>must</b> pass <code>VITE_API_BASE_URL=/api</code>. A plain <code>npm run build</code> picks up <code>.env.production</code> which points at the <em>real production API</em> (<code>api.sfcpcsystem.com</code>) and the demo will fail to log in / load data. See <a href="#gotchas">Gotcha #3</a>.</div>
+<pre><code><span class="k">cd</span> /Users/mac/dev/sfc-mes-v3/sfcmes-frontend-v3
+VITE_API_BASE_URL=/api npm run build
+rsync -az --delete \
+  -e <span style="color:#f0d9a8">"ssh -i /Users/mac/dev/aws-ssh-sfc-v3-demo/sfc-v3-demo.pem"</span> \
+  dist/ ubuntu@18.140.71.168:/var/www/sfc-demo/
+<span class="cmt"># then hard-refresh the browser (Cmd+Shift+R) to drop the cached bundle</span></code></pre>
+
+<h3><span class="pill be">Backend</span> sync &amp; restart</h3>
+<div class="callout warn"><span class="lbl">Never overwrite the server's .env</span>
+The demo <code>.env</code> on the server holds demo-specific values (<code>APP_BASE_URL</code>, <code>ALLOWED_ORIGINS</code>, S3 creds). The <code>--exclude '.env'</code> below preserves it. The server <code>.env</code> is the source of truth.</div>
+<pre><code><span class="k">cd</span> /Users/mac/dev/sfc-mes-v3/sfcmes-backend-v3
+rsync -az --delete \
+  --exclude node_modules --exclude .git --exclude dist --exclude '.env' \
+  -e <span style="color:#f0d9a8">"ssh -i /Users/mac/dev/aws-ssh-sfc-v3-demo/sfc-v3-demo.pem"</span> \
+  ./ ubuntu@54.254.140.44:~/sfcmes-backend-v3/
+
+ssh -i /Users/mac/dev/aws-ssh-sfc-v3-demo/sfc-v3-demo.pem ubuntu@54.254.140.44 \
+  <span style="color:#f0d9a8">'cd ~/sfcmes-backend-v3 &amp;&amp; npm ci --omit=dev &amp;&amp; pm2 restart sfc-backend --update-env'</span></code></pre>
+
+<h2 id="backend"><span class="n">5</span>Full backend deploy (fresh box)</h2>
+<div class="step"><div class="num">1</div><div class="body"><h4>Install runtime</h4>
+<pre><code>ssh -i .../sfc-v3-demo.pem ubuntu@54.254.140.44
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs rsync
+sudo npm install -g pm2</code></pre></div></div>
+<div class="step"><div class="num">2</div><div class="body"><h4>Ship the code</h4>
+<pre><code><span class="cmt"># from your Mac -- first deploy includes .env, then edit it on the server (next step)</span>
+rsync -az --exclude node_modules --exclude .git --exclude dist \
+  -e "ssh -i .../sfc-v3-demo.pem" ./ ubuntu@54.254.140.44:~/sfcmes-backend-v3/</code></pre></div></div>
+<div class="step"><div class="num">3</div><div class="body"><h4>Adjust <code>.env</code> for the demo (on the server)</h4>
+<pre><code>PORT=3000                              <span class="cmt"># already correct</span>
+APP_BASE_URL=http://18.140.71.168
+ALLOWED_ORIGINS=...,http://18.140.71.168 <span class="cmt"># append the frontend origin</span>
+AWS_BUCKET_NAME=bucket-sfc-v3-demo
+AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY = demo key   <span class="cmt"># scoped to the demo bucket</span>
+DB_* = dev RDS (unchanged)</code></pre></div></div>
+<div class="step"><div class="num">4</div><div class="body"><h4>Install deps, start, persist</h4>
+<pre><code>cd ~/sfcmes-backend-v3
+npm ci --omit=dev
+pm2 start src/index.js --name sfc-backend --time
+pm2 save
+sudo env PATH=$PATH pm2 startup systemd -u ubuntu --hp /home/ubuntu   <span class="cmt"># survives reboot</span></code></pre></div></div>
+<div class="callout ok"><span class="lbl">Expected log</span> <code>Server running on port 3000</code> + <code>All necessary tables have been created or already exist.</code> — check with <code>pm2 logs sfc-backend</code>.</div>
+
+<h2 id="frontend"><span class="n">6</span>Full frontend deploy (fresh box)</h2>
+<div class="step"><div class="num">1</div><div class="body"><h4>Install nginx</h4>
+<pre><code>ssh -i .../sfc-v3-demo.pem ubuntu@18.140.71.168
+sudo apt-get update &amp;&amp; sudo apt-get install -y nginx rsync
+sudo mkdir -p /var/www/sfc-demo &amp;&amp; sudo chown -R ubuntu:ubuntu /var/www/sfc-demo</code></pre></div></div>
+<div class="step"><div class="num">2</div><div class="body"><h4>Build &amp; upload</h4>
+<pre><code><span class="cmt"># on your Mac</span>
+VITE_API_BASE_URL=/api npm run build
+rsync -az --delete -e "ssh -i .../sfc-v3-demo.pem" dist/ ubuntu@18.140.71.168:/var/www/sfc-demo/</code></pre></div></div>
+<div class="step"><div class="num">3</div><div class="body"><h4>nginx site config</h4>
+<p>Write to <code>/etc/nginx/sites-available/sfc-demo</code>, symlink into <code>sites-enabled</code>, remove <code>default</code>:</p>
+<pre><code>server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    root /var/www/sfc-demo;
+    index index.html;
+    client_max_body_size 50m;
+
+    <span class="cmt"># API -&gt; backend over the private network (backend :3000 stays off the public internet)</span>
+    location /api/ {
+        proxy_pass http://172.26.3.252:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+
+    <span class="cmt"># SPA fallback for React Router</span>
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}</code></pre>
+<pre><code>sudo rm -f /etc/nginx/sites-enabled/default
+sudo ln -sf /etc/nginx/sites-available/sfc-demo /etc/nginx/sites-enabled/sfc-demo
+sudo nginx -t &amp;&amp; sudo systemctl reload nginx</code></pre></div></div>
+<div class="callout ok"><span class="lbl">Why the private IP?</span> Proxying to <code>172.26.3.252</code> (backend private IP) works with <b>no firewall change</b> — same-region Lightsail instances share a private network — and keeps backend :3000 off the public internet entirely.</div>
+
+<h2 id="s3"><span class="n">7</span>S3 bucket setup</h2>
+<p>The backend serves images as <b>direct public URLs</b> (<code>https://&lt;bucket&gt;.s3.&lt;region&gt;.amazonaws.com/&lt;key&gt;</code>) with <b>no presigning</b>. Therefore the bucket <b>must be public-read</b>, or every image 403s.</p>
+<h3>Bucket policy (public read)</h3>
+<pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "PublicReadDemo", "Effect": "Allow", "Principal": "*",
+    "Action": "s3:GetObject", "Resource": "arn:aws:s3:::bucket-sfc-v3-demo/*"
+  }]
+}</code></pre>
+<p>Also turn <b>off</b> "Block all public access" for the bucket. Then give the demo IAM user write access:</p>
+<pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": ["s3:PutObject","s3:DeleteObject","s3:GetObject"],
+    "Resource": "arn:aws:s3:::bucket-sfc-v3-demo/*"
+  }]
+}</code></pre>
+<div class="callout warn"><span class="lbl">Existing vs new images</span>
+Image URLs are stored in the DB at upload time. Old records point at the original <code>sangfahs3</code> bucket; only <b>new</b> uploads go to <code>bucket-sfc-v3-demo</code>. Both display as long as both buckets stay public-read. Full isolation would require migrating objects + rewriting DB URLs.</div>
+
+<h2 id="gotchas"><span class="n">8</span>Gotchas &amp; fixes <span style="font-size:14px;color:var(--muted)">(the reason this doc exists)</span></h2>
+
+<h3>#1 — SSH key not authorized on the instances</h3>
+<p><b>Symptom:</b> <code>Permission denied (publickey)</code> on both boxes. <b>Cause:</b> the key pair was created after the instances launched. <b>Fix:</b> add the public key via the Lightsail browser-SSH console (see <a href="#prereq">§3</a>).</p>
+
+<h3>#2 — Backend crash-loop: <code>Cannot find module './utils/logger'</code></h3>
+<p><b>Cause:</b> the file is <code>Logger.js</code> (capital L) but the code did <code>require('./utils/logger')</code>. Works on macOS (case-insensitive), <b>crashes on Linux</b> (case-sensitive). <b>Fix:</b> corrected the require to <code>./utils/Logger</code> in <code>src/index.js</code>. Commit this on <code>feature/ai</code>.</p>
+
+<h3>#3 — Demo can't log in / no data loads</h3>
+<p><b>Cause:</b> <code>vite build</code> loads <code>.env.production</code>, which overrides <code>.env</code> and sets <code>VITE_API_BASE_URL=https://api.sfcpcsystem.com/api</code> (the <em>real production API</em>). The demo bundle then called production instead of <code>/api</code>. <b>Fix:</b> build with a shell override — <code>VITE_API_BASE_URL=/api npm run build</code> (a real env var wins over <code>.env.production</code> in Vite). Hard-refresh the browser after redeploy to drop the cached bundle.</p>
+<div class="callout danger"><span class="lbl">Never point the demo at api.sfcpcsystem.com</span> That is the live production API. The demo must always use <code>/api</code> (same-origin → demo backend).</div>
+
+<h3>#4 — Backend firewall</h3>
+<p>Not needed. Proxying to the backend's <b>private IP</b> avoids exposing :3000 and needs no Lightsail networking rule.</p>
+
+<h3>#5 — S3 private bucket → broken images</h3>
+<p>The app has no presigning, so a fully-private bucket 403s every image. The demo bucket must be public-read (see <a href="#s3">§7</a>). The original IAM user (<code>sangfahs3.obj-mgmt</code>) is scoped to <code>sangfahs3</code> only — the demo bucket needs its own key/policy.</p>
+
+<h3>#6 — Scanning a piece QR opened nothing</h3>
+<p><b>Cause:</b> the in-app drawer QR encoded a bare component UUID, not a URL. <b>Fix:</b> encode <code>${window.location.origin}/forms/form-component-card/${uuid}</code> in <code>Drawer.jsx</code> so a phone opens the status-update page. <em>Note:</em> QR codes only point at the demo if generated/scanned <b>on the demo site</b> — physical stickers printed from production still point at production.</p>
+
+<h3>#7 — QR Save / Print produced a blank image (no QR)</h3>
+<p>Three separate bugs in <code>QRCodePage.js</code>, all fixed:</p>
+<table>
+  <tr><th>Bug</th><th>Fix</th></tr>
+  <tr><td>html2canvas can't capture a live <code>&lt;canvas&gt;</code> → QR blank in output</td><td>Snapshot the QR canvas to a data-URL <code>&lt;img&gt;</code> and capture that</td></tr>
+  <tr><td>Print used <code>window.open()</code> after <code>await</code> → popup blocked (esp. mobile)</td><td>Print via a hidden <code>&lt;iframe&gt;</code> (never popup-blocked)</td></tr>
+  <tr><td>Download anchor not in DOM + immediate <code>revokeObjectURL</code> → download cancelled</td><td>DOM-attach the anchor, defer the revoke</td></tr>
+</table>
+
+<h2 id="verify"><span class="n">9</span>Verification</h2>
+<pre><code><span class="cmt"># SPA + routing</span>
+curl -s -o /dev/null -w "root: %{http_code}\n"        http://18.140.71.168/
+curl -s -o /dev/null -w "deeplink: %{http_code}\n"    http://18.140.71.168/dashboards/modern
+<span class="cmt"># API proxied to backend (real data)</span>
+curl -s -o /dev/null -w "api: %{http_code}\n"         http://18.140.71.168/api/projects
+<span class="cmt"># served bundle must NOT contain the production API host</span>
+JS=$(curl -s http://18.140.71.168/ | grep -o '/assets/index-[^"]*\.js' | head -1)
+curl -s "http://18.140.71.168$JS" | grep -q sfcpcsystem &amp;&amp; echo "BAD: prod API baked in" || echo "OK: /api"
+<span class="cmt"># backend health</span>
+ssh -i .../sfc-v3-demo.pem ubuntu@54.254.140.44 'pm2 list; pm2 logs sfc-backend --nostream --lines 20'</code></pre>
+<p>All HTTP codes should be <code>200</code> (a <code>404</code> on <code>/</code> at the backend directly is normal — it has no root route).</p>
+
+<h2 id="security"><span class="n">10</span>Security notes</h2>
+<ul>
+  <li><b>Plain HTTP, no TLS.</b> Logins go in the clear. For a public-facing demo, add a domain + certbot (a bare IP can't get a Let's Encrypt cert).</li>
+  <li><b>Database is the dev RDS.</b> The demo reads <em>and writes</em> real dev data — deletes/edits during a demo affect it. Consider a snapshot before a customer session, or hide destructive actions.</li>
+  <li><b>Secrets live only in gitignored <code>.env</code> files</b> (server + local backend). Never put AWS/DB secrets in the frontend <code>.env</code> — it is <b>git-tracked</b> and would be committed. Never commit <code>NOTE.txt</code>-style scratch files with keys.</li>
+  <li><b>Backend :3000 is not public</b> — reached only via the frontend nginx over the private network.</li>
+</ul>
+
+<footer>
+  SFC MES v3 demo deployment reference · generated 2026-07-07 · secrets redacted.<br>
+  Source of truth for live config: nginx <code>/etc/nginx/sites-available/sfc-demo</code> and the backend <code>~/sfcmes-backend-v3/.env</code> on their respective boxes.
+</footer>
+</div>
+</body>
+</html>

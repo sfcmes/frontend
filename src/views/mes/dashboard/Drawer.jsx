@@ -86,7 +86,7 @@ function PieceDetail({ piece, project, onClose, onStatusUpdated }) {
 
       <div className="flex flex-col items-center gap-3 rounded-md border border-mes-border p-4 sm:flex-row">
         <div className="rounded-sm bg-mes-text p-2">
-          <QRCodeSVG value={uuid} size={110} bgColor="var(--mes-text)" fgColor="var(--mes-bg)" />
+          <QRCodeSVG value={`${window.location.origin}/forms/form-component-card/${uuid}`} size={110} bgColor="var(--mes-text)" fgColor="var(--mes-bg)" />
         </div>
         <div className="w-full min-w-0 text-sm">
           <div className="flex justify-between gap-3 border-b border-mes-border py-1.5">
