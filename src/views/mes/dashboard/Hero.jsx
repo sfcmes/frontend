@@ -1,4 +1,4 @@
-// [MES] Hero — dashboard header: scope, totals, overall installed donut,
+// [MES] Hero — dashboard header: scope, totals, overall manufactured donut,
 // 5 cumulative milestone stat cards. Real data only (no fake trends/freshness).
 import { useMemo } from 'react';
 import { Icon } from 'src/components/mes/Icon';
@@ -36,8 +36,8 @@ function StatCard({ statKey, count, total }) {
 
 export function Hero({ agg, projectCount, scope, onReset }) {
   const cumulative = useMemo(() => toCumulativeStatus(agg.counts), [agg.counts]);
-  const installed = cumulative.installed || 0;
-  const overall = pct(installed, agg.total);
+  const manufactured = cumulative.manufactured || 0;
+  const overall = pct(manufactured, agg.total);
 
   return (
     <section className="mb-4">
@@ -65,16 +65,16 @@ export function Hero({ agg, projectCount, scope, onReset }) {
           <div className="flex items-center gap-3 shrink-0">
             <Donut
               segments={[
-                { value: installed, cssVar: '--status-installed' },
-                { value: Math.max(0, agg.total - installed), cssVar: '--mes-surface-2' },
+                { value: manufactured, cssVar: '--status-manufactured' },
+                { value: Math.max(0, agg.total - manufactured), cssVar: '--mes-surface-2' },
               ]}
               size={68} thickness={8}
             >
               <span className="text-sm font-bold tabular-nums">{overall.toFixed(0)}<span className="text-[10px]">%</span></span>
             </Donut>
             <div>
-              <div className="text-sm font-semibold">ติดตั้งสำเร็จ</div>
-              <div className="text-xs text-mes-muted tabular-nums">{fmt(installed)} / {fmt(agg.total)} ชิ้น</div>
+              <div className="text-sm font-semibold">ผลิตแล้ว</div>
+              <div className="text-xs text-mes-muted tabular-nums">{fmt(manufactured)} / {fmt(agg.total)} ชิ้น</div>
             </div>
           </div>
         </div>

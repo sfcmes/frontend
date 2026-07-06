@@ -3,12 +3,12 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Icon } from 'src/components/mes/Icon';
 import { Donut, PipelineBar } from 'src/components/mes/charts';
-import { COMPONENT_STATUS, PIPE_ORDER, fmt, pct } from 'src/components/mes/status-meta';
+import { COMPONENT_STATUS, PIPE_ORDER, toCumulativeStatus, fmt, pct } from 'src/components/mes/status-meta';
 import { EmptyState, CardHeader } from 'src/components/mes/ui';
 import OtherComponentsTab from './OtherComponentsTab';
 
 function ProjectCard({ project, selected, onSelect, onOpen }) {
-  const inst = project.status.installed || 0;
+  const mfg = toCumulativeStatus(project.status).manufactured || 0;
   return (
     <button
       onClick={() => onSelect(project)}
@@ -28,7 +28,7 @@ function ProjectCard({ project, selected, onSelect, onOpen }) {
       <div className="mt-2 flex items-center gap-3 text-xs text-mes-muted tabular-nums">
         <span>{fmt(project.sectionCount)} ชั้น</span>
         <span>{fmt(project.total)} ชิ้นงาน</span>
-        <span className="ml-auto font-semibold text-mes-text">{pct(inst, project.total).toFixed(0)}% ติดตั้ง</span>
+        <span className="ml-auto font-semibold text-mes-text">{pct(mfg, project.total).toFixed(0)}% ผลิตแล้ว</span>
       </div>
       <div className="mt-2">
         <PipelineBar status={project.status} order={PIPE_ORDER} meta={COMPONENT_STATUS} height={8} />
@@ -38,29 +38,29 @@ function ProjectCard({ project, selected, onSelect, onOpen }) {
 }
 
 function ProjectRow({ project, selected, onSelect, onOpen }) {
-  const inst = project.status.installed || 0;
-  const prog = pct(inst, project.total);
+  const mfg = toCumulativeStatus(project.status).manufactured || 0;
+  const prog = pct(mfg, project.total);
   return (
     <tr
       onClick={() => onSelect(project)}
       className={`cursor-pointer transition-colors hover:bg-mes-surface-2 ${selected ? 'bg-mes-surface-2' : ''}`}
       style={selected ? { boxShadow: 'inset 3px 0 0 var(--mes-accent)' } : undefined}
     >
-      <td className="mes-td"><span className="rounded-sm bg-mes-surface-2 px-2 py-0.5 font-mono text-xs text-mes-muted">{project.code}</span></td>
+      <td className="mes-td"><span title={project.code} className="inline-block max-w-full truncate rounded-sm bg-mes-surface-2 px-2 py-0.5 align-middle font-mono text-xs text-mes-muted">{project.code}</span></td>
       <td className="mes-td">
-        <div className="max-w-[280px] truncate font-semibold">{project.name}</div>
+        <div className="truncate font-semibold">{project.name}</div>
       </td>
       <td className="mes-td text-right">{fmt(project.sectionCount)}</td>
       <td className="mes-td text-right font-semibold">{fmt(project.total)}</td>
-      <td className="mes-td w-[26%] min-w-[140px]">
+      <td className="mes-td">
         <PipelineBar status={project.status} order={PIPE_ORDER} meta={COMPONENT_STATUS} height={8} />
       </td>
       <td className="mes-td">
         <div className="flex items-center gap-2 justify-end">
           <Donut
             segments={[
-              { value: inst, cssVar: '--status-installed' },
-              { value: Math.max(0, project.total - inst), cssVar: '--mes-surface-2' },
+              { value: mfg, cssVar: '--status-manufactured' },
+              { value: Math.max(0, project.total - mfg), cssVar: '--mes-surface-2' },
             ]}
             size={32} thickness={5}
           />
@@ -157,16 +157,16 @@ export function ProjectTable({ projects, selectedId, userRole, onSelect, onOpen 
           </div>
           {/* md+: table */}
           <div className="hidden md:block">
-            <table className="w-full">
+            <table className="w-full table-fixed">
               <thead>
                 <tr>
-                  <th className="mes-th">รหัสโครงการ</th>
+                  <th className="mes-th w-[11%]">รหัสโครงการ</th>
                   <th className="mes-th">ชื่อโครงการ</th>
-                  <th className="mes-th text-right">จำนวนชั้น</th>
-                  <th className="mes-th text-right">จำนวนชิ้นงาน</th>
-                  <th className="mes-th">สถานะการผลิต</th>
-                  <th className="mes-th text-right">ติดตั้ง</th>
-                  <th className="mes-th" />
+                  <th className="mes-th w-[8%] text-right">จำนวนชั้น</th>
+                  <th className="mes-th w-[11%] text-right">จำนวนชิ้นงาน</th>
+                  <th className="mes-th w-[19%]">สถานะการผลิต</th>
+                  <th className="mes-th w-[12%] text-right">ผลิตแล้ว</th>
+                  <th className="mes-th w-[9%]" />
                 </tr>
               </thead>
               <tbody>
