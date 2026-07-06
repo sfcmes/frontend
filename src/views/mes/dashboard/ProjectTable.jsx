@@ -56,7 +56,7 @@ function ProjectRow({ project, selected, onSelect, onOpen }) {
         <PipelineBar status={project.status} order={PIPE_ORDER} meta={COMPONENT_STATUS} height={8} />
       </td>
       <td className="mes-td">
-        <div className="flex items-center gap-2 justify-end">
+        <div className="flex items-center justify-end gap-2">
           <Donut
             segments={[
               { value: mfg, cssVar: '--status-manufactured' },
@@ -64,12 +64,12 @@ function ProjectRow({ project, selected, onSelect, onOpen }) {
             ]}
             size={32} thickness={5}
           />
-          <span className="tabular-nums text-sm">{prog.toFixed(0)}%</span>
+          <span className="w-10 text-right tabular-nums text-sm">{prog.toFixed(0)}%</span>
         </div>
       </td>
       <td className="mes-td text-right">
         <button
-          className="mes-btn mes-btn-ghost !min-h-0 !py-1.5 !px-3 text-xs"
+          className="mes-btn mes-btn-ghost !min-h-0 !py-1.5 !px-2.5 text-xs"
           onClick={(e) => { e.stopPropagation(); onOpen(project); }}
         >
           เปิด <Icon name="arrow-up-right" size={13} />
@@ -162,11 +162,11 @@ export function ProjectTable({ projects, selectedId, userRole, onSelect, onOpen 
                 <tr>
                   <th className="mes-th w-[11%]">รหัสโครงการ</th>
                   <th className="mes-th">ชื่อโครงการ</th>
-                  <th className="mes-th w-[8%] text-right">จำนวนชั้น</th>
-                  <th className="mes-th w-[11%] text-right">จำนวนชิ้นงาน</th>
-                  <th className="mes-th w-[19%]">สถานะการผลิต</th>
-                  <th className="mes-th w-[12%] text-right">ผลิตแล้ว</th>
-                  <th className="mes-th w-[9%]" />
+                  <th className="mes-th w-[9%] text-right">จำนวนชั้น</th>
+                  <th className="mes-th w-[12%] text-right">จำนวนชิ้นงาน</th>
+                  <th className="mes-th w-[16%]">สถานะการผลิต</th>
+                  <th className="mes-th w-[14%] text-right">ผลิตแล้ว</th>
+                  <th className="mes-th w-[12%]" />
                 </tr>
               </thead>
               <tbody>
