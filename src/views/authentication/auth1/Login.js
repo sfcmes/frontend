@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from 'src/contexts/AuthContext';
 import PageContainer from 'src/components/container/PageContainer';
-import { COMPONENT_STATUS } from 'src/components/mes/status-meta';
+import { COMPONENT_STATUS, toCumulativeStatus } from 'src/components/mes/status-meta';
 import { Donut } from 'src/components/mes/charts';
 import { Spinner } from 'src/components/mes/ui';
 import { fetchProjects, fetchComponentsByProjectId } from 'src/utils/api';
@@ -119,6 +119,10 @@ const PerfCard = ({ site, featured = false }) => {
   const statusTotal = loaded
     ? Object.values(status).reduce((sum, v) => sum + v, 0)
     : 0;
+  // Rings show cumulative milestones (installed counts as manufactured/
+  // transported/accepted too) over the raw component total — same pattern
+  // as the dashboard (Hero/RightPanel). State stays raw.
+  const cumulative = loaded ? toCumulativeStatus(status) : null;
 
   return (
     <button
@@ -177,7 +181,7 @@ const PerfCard = ({ site, featured = false }) => {
             {loaded ? (
               <div className="grid w-full grid-cols-5 gap-1">
                 {STAGES.map((stage, i) => {
-                  const count = status[stage.key] || 0;
+                  const count = cumulative[stage.key] || 0;
                   return (
                     <div
                       key={stage.key}
