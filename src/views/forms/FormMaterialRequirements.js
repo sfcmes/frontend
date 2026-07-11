@@ -274,9 +274,12 @@ const FormMaterialRequirements = () => {
   const onGenerate = async () => {
     setGenerateBusy(true);
     try {
+      // Single-project selection → attribute PO lines to that project so the
+      // generated PO shows in its dashboard drawer; multi-project stays null.
+      const pid = selectedProjectIds.length === 1 ? selectedProjectIds[0] : null;
       const lines = materials
         .filter((m) => selectedMaterialIds.has(m.material.id))
-        .map((m) => ({ material_id: m.material.id, quantity: m.net, project_id: null }));
+        .map((m) => ({ material_id: m.material.id, quantity: m.net, project_id: pid }));
       const payload = { lines };
       if (notes.trim()) payload.notes = notes.trim();
       if (deliveryDate) payload.requested_delivery_date = deliveryDate;
