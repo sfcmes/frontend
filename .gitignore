@@ -30,3 +30,9 @@ temp-image/
 premium-documentation/
 skills-lock.json
 sfcmes-frontend-builder.skill
+
+# local scratch notes (kept out of repo)
+/AUDIT.md
+/NOTE.txt
+/TODO.md
+/TOKEN.md
