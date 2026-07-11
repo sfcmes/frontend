@@ -6,7 +6,7 @@ import FVProject from '../../components/forms/form-validation/FVProject';
 import ProjectModal from './ProjectModal';
 import api, { fetchProjects, createProject, updateProject, deleteProject } from 'src/utils/api';
 import { StatusBadge } from 'src/components/mes/StatusBadge';
-import { ConfirmDialog, EmptyState, useToast, CardHeader } from 'src/components/mes/ui';
+import { ConfirmDialog, EmptyState, useToast, CardHeader, Modal } from 'src/components/mes/ui';
 
 const RowActions = ({ project, onView, onEdit, onDelete }) => (
   <div className="flex gap-1.5">
@@ -79,6 +79,7 @@ const FormProject = () => {
   const [isModalOpen, setModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const { showToast, toastNode } = useToast();
 
   const fetchProjectsData = async () => {
@@ -107,6 +108,11 @@ const FormProject = () => {
     } catch (error) {
       showToast(`บันทึกไม่สำเร็จ: ${error.message}`, 'error');
     }
+  };
+
+  const handleCreateProject = async (newProject) => {
+    await handleAddProject(newProject);
+    setCreateOpen(false);
   };
 
   const handleViewProject = (project) => {
@@ -151,23 +157,27 @@ const FormProject = () => {
 
   return (
     <PageContainer title="สร้างโครงการใหม่" description="This is the form to create a new project.">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="mes-card self-start">
-          <CardHeader title="ภาพรวมโครงการ" />
-          <ProjectList
-            projects={projects}
-            onView={handleViewProject}
-            onEdit={handleEditProject}
-            onDelete={(id) => setDeleteId(id)}
-          />
-        </div>
-        <div className="mes-card self-start">
-          <CardHeader title="สร้างโครงการใหม่" />
-          <div className="p-4 md:p-5">
-            <FVProject onAddProject={handleAddProject} />
-          </div>
-        </div>
+      <div className="mes-card">
+        <CardHeader
+          title="ภาพรวมโครงการ"
+          right={
+            <button className="mes-btn mes-btn-primary" onClick={() => setCreateOpen(true)}>
+              + สร้างโครงการใหม่
+            </button>
+          }
+        />
+        <ProjectList
+          projects={projects}
+          onView={handleViewProject}
+          onEdit={handleEditProject}
+          onDelete={(id) => setDeleteId(id)}
+        />
       </div>
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="สร้างโครงการใหม่">
+        <div className="p-1">
+          <FVProject onAddProject={handleCreateProject} />
+        </div>
+      </Modal>
       <ProjectModal
         open={isModalOpen}
         project={selectedProject}

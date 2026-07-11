@@ -6,7 +6,7 @@ import EditSectionModal from './EditSectionModal';
 import FVSection from '../../components/forms/form-validation/FVSection';
 import api, { createSection, updateSection, deleteSection } from '../../utils/api';
 import { StatusBadge } from 'src/components/mes/StatusBadge';
-import { ConfirmDialog, EmptyState, useToast, CardHeader } from 'src/components/mes/ui';
+import { ConfirmDialog, EmptyState, useToast, CardHeader, Modal } from 'src/components/mes/ui';
 
 const SectionList = ({ sections, onEdit, onDelete }) => (
   sections.length === 0 ? (
@@ -71,6 +71,7 @@ const FormSection = () => {
   const [editingSection, setEditingSection] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const { showToast, toastNode } = useToast();
 
   const fetchSections = async () => {
@@ -105,6 +106,11 @@ const FormSection = () => {
     }
   };
 
+  const handleCreateSection = async (newSection) => {
+    await handleAddSection(newSection);
+    setCreateOpen(false);
+  };
+
   const handleEditSection = async (updatedSection) => {
     try {
       await updateSection(updatedSection.id, updatedSection);
@@ -131,22 +137,22 @@ const FormSection = () => {
 
   return (
     <PageContainer title="สร้างชั้นของแต่ละโครงการ" description="this is Form create new project page">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="mes-card self-start">
-          <CardHeader title="ภาพรวมแต่ละชั้นของแต่ละโครงการ" />
-          <SectionList
-            sections={sections}
-            onEdit={(s) => { setEditingSection(s); setIsEditModalOpen(true); }}
-            onDelete={(id) => setDeleteId(id)}
-          />
-        </div>
-        <div className="mes-card self-start">
-          <CardHeader title="สร้างชั้นของแต่ละโครงการ" />
-          <div className="p-4 md:p-5">
-            <FVSection onAddSection={handleAddSection} />
-          </div>
-        </div>
+      <div className="mes-card self-start">
+        <CardHeader
+          title="ภาพรวมแต่ละชั้นของแต่ละโครงการ"
+          right={<button className="mes-btn mes-btn-primary" onClick={() => setCreateOpen(true)}>+ สร้างชั้นใหม่</button>}
+        />
+        <SectionList
+          sections={sections}
+          onEdit={(s) => { setEditingSection(s); setIsEditModalOpen(true); }}
+          onDelete={(id) => setDeleteId(id)}
+        />
       </div>
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="สร้างชั้นในโครงการ">
+        <div className="p-1">
+          <FVSection onAddSection={handleCreateSection} />
+        </div>
+      </Modal>
       <EditSectionModal
         open={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
