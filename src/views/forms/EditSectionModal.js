@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { Modal } from 'src/components/mes/ui';
 import { SEM_STATUS } from 'src/components/mes/status-meta';
+import SemStatusSelect from 'src/components/mes/SemStatusSelect';
 
 const EditSectionModal = ({ open, section, onClose, onSave, isEditing }) => {
   const [formData, setFormData] = useState({
     projectSelection: '',
     sectionName: '',
+    components: '',
     status: '',
   });
 
@@ -16,6 +18,7 @@ const EditSectionModal = ({ open, section, onClose, onSave, isEditing }) => {
       setFormData({
         projectSelection: section.project_id || '',
         sectionName: section.name || '',
+        components: section.components ?? '',
         status: section.status || '',
       });
     }
@@ -31,6 +34,7 @@ const EditSectionModal = ({ open, section, onClose, onSave, isEditing }) => {
       id: section.id,
       project_id: formData.projectSelection,
       name: formData.sectionName,
+      components: formData.components,
       status: formData.status,
       updated_at: new Date(),
     };
@@ -80,19 +84,46 @@ const EditSectionModal = ({ open, section, onClose, onSave, isEditing }) => {
           />
         </div>
         <div>
+          <label className="mes-label" htmlFor="esm-components">จำนวนชิ้นงาน</label>
+          <div className="mes-affix">
+            <input
+              id="esm-components"
+              name="components"
+              className="mes-input"
+              type="number"
+              inputMode="numeric"
+              value={formData.components}
+              onChange={handleChange}
+              disabled={!isEditing}
+            />
+            <span className="mes-affix-unit">ชิ้น</span>
+          </div>
+        </div>
+        <div>
           <label className="mes-label" htmlFor="esm-status">สถานะ</label>
-          <select
-            id="esm-status"
-            name="status"
-            className="mes-input"
-            value={formData.status}
-            onChange={handleChange}
-            disabled={!isEditing}
-          >
-            {['planning', 'in_progress', 'completed', 'on_hold'].map((s) => (
-              <option key={s} value={s}>{SEM_STATUS[s].th}</option>
-            ))}
-          </select>
+          {isEditing ? (
+            <SemStatusSelect
+              id="esm-status"
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              order={['planning', 'in_progress', 'completed', 'on_hold']}
+              placeholder="เลือกสถานะของชั้น"
+            />
+          ) : (
+            <select
+              id="esm-status"
+              name="status"
+              className="mes-input"
+              value={formData.status}
+              onChange={handleChange}
+              disabled
+            >
+              {['planning', 'in_progress', 'completed', 'on_hold'].map((s) => (
+                <option key={s} value={s}>{SEM_STATUS[s].th}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
     </Modal>

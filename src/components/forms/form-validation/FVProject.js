@@ -2,6 +2,7 @@
 // Validation schema identical to previous implementation.
 import { useFormik } from 'formik';
 import * as yup from 'yup';
+import SemStatusSelect from 'src/components/mes/SemStatusSelect';
 
 const validationSchema = yup.object({
   projectName: yup
@@ -22,8 +23,8 @@ const validationSchema = yup.object({
     .required('กรุณาใส่จำนวนชั้นทั้งหมด'),
   status: yup
     .string()
-    .oneOf(['Planning', 'In Progress', 'Completed', 'On Hold'])
-    .required('กรุณาใส่จำนวนชั้นของโครงการ'),
+    .oneOf(['planning', 'in_progress', 'completed', 'on_hold'])
+    .required('กรุณาเลือกสถานะโครงการ'),
 });
 
 const FieldError = ({ show, msg }) => (show && msg ? <div className="mt-1 text-xs text-sem-danger">{msg}</div> : null);
@@ -37,14 +38,14 @@ const FVProject = ({ onAddProject }) => {
       status: '',
     },
     validationSchema,
-    onSubmit: (values) => {
+    onSubmit: async (values) => {
       const newProject = {
         name: values.projectName,
         project_code: values.projectCode,
         sections: values.section,
         status: values.status,
       };
-      onAddProject(newProject);
+      await onAddProject(newProject);
       formik.resetForm();
     },
   });
@@ -79,40 +80,39 @@ const FVProject = ({ onAddProject }) => {
       </div>
       <div>
         <label className="mes-label" htmlFor="section">จำนวนชั้นของโครงการ</label>
-        <input
-          id="section"
-          name="section"
-          className="mes-input"
-          type="number"
-          inputMode="numeric"
-          placeholder="กรอกจำนวนชั้นทั้งหมดของโครงการ"
-          value={formik.values.section}
-          onChange={formik.handleChange}
-          onBlur={formik.handleBlur}
-        />
+        <div className="mes-affix">
+          <input
+            id="section"
+            name="section"
+            className="mes-input"
+            type="number"
+            inputMode="numeric"
+            placeholder="กรอกจำนวนชั้นทั้งหมดของโครงการ"
+            value={formik.values.section}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+          />
+          <span className="mes-affix-unit">ชั้น</span>
+        </div>
         <FieldError show={formik.touched.section} msg={formik.errors.section} />
+        <div className="mes-hint">จำนวนชั้นทั้งหมดของอาคาร (1–100)</div>
       </div>
       <div>
         <label className="mes-label" htmlFor="status">สถานะโครงการ</label>
-        <select
+        <SemStatusSelect
           id="status"
           name="status"
-          className="mes-input"
           value={formik.values.status}
           onChange={formik.handleChange}
           onBlur={formik.handleBlur}
-        >
-          <option value="">เลือกสถานะโครงการ</option>
-          <option value="Planning">Planning</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Completed">Completed</option>
-          <option value="On Hold">On Hold</option>
-        </select>
+          order={['planning', 'in_progress', 'completed', 'on_hold']}
+          placeholder="เลือกสถานะโครงการ"
+        />
         <FieldError show={formik.touched.status} msg={formik.errors.status} />
       </div>
       <div>
-        <button className="mes-btn mes-btn-primary w-full sm:w-auto" type="submit">
-          บันทึกโครงการเข้าระบบ
+        <button className="mes-btn mes-btn-primary w-full sm:w-auto" type="submit" disabled={formik.isSubmitting}>
+          {formik.isSubmitting ? 'กำลังบันทึก…' : 'บันทึกโครงการเข้าระบบ'}
         </button>
       </div>
     </form>

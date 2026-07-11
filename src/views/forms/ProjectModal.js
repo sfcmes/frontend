@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Modal } from 'src/components/mes/ui';
 import { StatusBadge } from 'src/components/mes/StatusBadge';
+import SemStatusSelect from 'src/components/mes/SemStatusSelect';
 
 const ProjectModal = ({ open, project, onClose, onSave, isEditing }) => {
   const [formData, setFormData] = useState({
@@ -70,7 +71,18 @@ const ProjectModal = ({ open, project, onClose, onSave, isEditing }) => {
         </div>
         <div>
           <div className="mes-label">สถานะ</div>
-          <StatusBadge status={formData.status} kind="sem" />
+          {isEditing ? (
+            <SemStatusSelect
+              id="pm-status"
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              order={['planning', 'in_progress', 'completed', 'on_hold']}
+              placeholder="เลือกสถานะโครงการ"
+            />
+          ) : (
+            <StatusBadge status={formData.status} kind="sem" />
+          )}
         </div>
       </div>
     </Modal>

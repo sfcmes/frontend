@@ -27,14 +27,14 @@ const FVComponent = () => {
 
   return (
     <div>
-      <div className="flex gap-1 border-b border-mes-border">
+      <label className="mes-label">ประเภทชิ้นงาน</label>
+      <div className="mes-segment">
         {['ชิ้นงานพรีคาสท์', 'ชิ้นงานอื่นๆ'].map((label, i) => (
           <button
             key={label}
+            type="button"
             onClick={() => setTabValue(i)}
-            className={`min-h-touch md:min-h-0 px-3 py-2 text-sm font-semibold border-b-2 -mb-px ${
-              tabValue === i ? 'border-mes-accent text-mes-accent' : 'border-transparent text-mes-muted hover:text-mes-text'
-            }`}
+            className={`mes-segment-btn ${tabValue === i ? 'is-active' : ''}`}
           >
             {label}
           </button>
