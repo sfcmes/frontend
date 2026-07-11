@@ -53,17 +53,25 @@ const computeAreaVolume = (v) => {
   };
 };
 
-const NumberField = ({ formik, name, label, hint, onChange }) => (
+const NumberField = ({ formik, name, label, hint, unit, auto, onChange }) => (
   <div>
-    <label className="mes-label" htmlFor={name}>{label}</label>
-    <input
-      id={name}
-      className="mes-input"
-      type="number"
-      inputMode="decimal"
-      {...formik.getFieldProps(name)}
-      {...(onChange ? { onChange } : {})}
-    />
+    <div className="mb-1.5 flex items-center gap-2">
+      <label className="mes-label !mb-0" htmlFor={name}>{label}</label>
+      {auto && (
+        <span className="rounded-sm border border-mes-border px-1.5 text-xs text-mes-muted">อัตโนมัติ</span>
+      )}
+    </div>
+    <div className={unit ? 'mes-affix' : ''}>
+      <input
+        id={name}
+        className={`mes-input${auto ? ' mes-input-auto' : ''}`}
+        type="number"
+        inputMode="decimal"
+        {...formik.getFieldProps(name)}
+        {...(onChange ? { onChange } : {})}
+      />
+      {unit && <span className="mes-affix-unit">{unit}</span>}
+    </div>
     {hint && <div className="mt-1 text-xs text-mes-muted">{hint}</div>}
     <FieldError show={formik.touched[name]} msg={formik.errors[name]} />
   </div>
@@ -72,6 +80,7 @@ const NumberField = ({ formik, name, label, hint, onChange }) => (
 const PrecastComponentForm = ({ projects, sections, onProjectChange }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -86,13 +95,14 @@ const PrecastComponentForm = ({ projects, sections, onProjectChange }) => {
       area: '',
       volume: '',
       weight: '',
-      status: '',
+      status: 'planning',
       file: null,
     },
     validationSchema,
     onSubmit: async (values) => {
       setError('');
       setSuccess('');
+      setSubmitting(true);
       try {
         const formData = new FormData();
         formData.append('section_id', values.sectionId);
@@ -118,6 +128,8 @@ const PrecastComponentForm = ({ projects, sections, onProjectChange }) => {
         } else {
           setError(`เกิดข้อผิดพลาดในการสร้างชิ้นงาน: ${err.message}`);
         }
+      } finally {
+        setSubmitting(false);
       }
     },
   });
@@ -141,85 +153,105 @@ const PrecastComponentForm = ({ projects, sections, onProjectChange }) => {
         <div className="rounded-sm border border-sem-success px-3 py-2 text-sm text-sem-success">{success}</div>
       )}
 
-      <div>
-        <label className="mes-label" htmlFor="projectName">โครงการ</label>
-        <select
-          id="projectName"
-          name="projectName"
-          className="mes-input"
-          value={formik.values.projectName}
-          onChange={(event) => {
-            formik.setFieldValue('projectName', event.target.value);
-            onProjectChange(event);
-          }}
-        >
-          <option value="">—</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>{project.name}</option>
-          ))}
-        </select>
-        <FieldError show={formik.touched.projectName} msg={formik.errors.projectName} />
+      <div className="flex flex-col gap-3">
+        <span className="mes-group-label">โครงการ / ชั้น</span>
+        <div>
+          <label className="mes-label" htmlFor="projectName">โครงการ</label>
+          <select
+            id="projectName"
+            name="projectName"
+            className="mes-input"
+            value={formik.values.projectName}
+            onChange={(event) => {
+              formik.setFieldValue('projectName', event.target.value);
+              onProjectChange(event);
+            }}
+          >
+            <option value="">—</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>{project.name}</option>
+            ))}
+          </select>
+          <FieldError show={formik.touched.projectName} msg={formik.errors.projectName} />
+        </div>
+
+        <div>
+          <label className="mes-label" htmlFor="sectionId">ชั้น</label>
+          <select
+            id="sectionId"
+            name="sectionId"
+            className="mes-input"
+            value={formik.values.sectionId}
+            onChange={formik.handleChange}
+          >
+            <option value="">—</option>
+            {sections.map((section) => (
+              <option key={section.id} value={section.id}>{section.name}</option>
+            ))}
+          </select>
+          <FieldError show={formik.touched.sectionId} msg={formik.errors.sectionId} />
+        </div>
+
+        <div>
+          <label className="mes-label" htmlFor="componentName">ชื่อชิ้นงาน</label>
+          <input id="componentName" className="mes-input" {...formik.getFieldProps('componentName')} />
+          <FieldError show={formik.touched.componentName} msg={formik.errors.componentName} />
+        </div>
       </div>
 
       <div>
-        <label className="mes-label" htmlFor="sectionId">ชั้น</label>
-        <select
-          id="sectionId"
-          name="sectionId"
-          className="mes-input"
-          value={formik.values.sectionId}
-          onChange={formik.handleChange}
-        >
-          <option value="">—</option>
-          {sections.map((section) => (
-            <option key={section.id} value={section.id}>{section.name}</option>
-          ))}
-        </select>
-        <FieldError show={formik.touched.sectionId} msg={formik.errors.sectionId} />
+        <span className="mes-group-label">ขนาด</span>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <NumberField formik={formik} name="width" label="ความกว้าง" unit="มม." onChange={handleDimChange} />
+          <NumberField formik={formik} name="height" label="ความสูง" unit="มม." onChange={handleDimChange} />
+          <NumberField formik={formik} name="thickness" label="ความหนา" unit="มม." onChange={handleDimChange} />
+          <NumberField formik={formik} name="extension" label="ส่วนขยาย" unit="ตร.ม." onChange={handleDimChange} />
+          <NumberField formik={formik} name="reduction" label="ส่วนลด" unit="ตร.ม." onChange={handleDimChange} />
+        </div>
       </div>
 
       <div>
-        <label className="mes-label" htmlFor="componentName">ชื่อชิ้นงาน</label>
-        <input id="componentName" className="mes-input" {...formik.getFieldProps('componentName')} />
-        <FieldError show={formik.touched.componentName} msg={formik.errors.componentName} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <NumberField formik={formik} name="width" label="ความกว้าง (มม.)" onChange={handleDimChange} />
-        <NumberField formik={formik} name="height" label="ความสูง (มม.)" onChange={handleDimChange} />
-        <NumberField formik={formik} name="thickness" label="ความหนา (มม.)" onChange={handleDimChange} />
-        <NumberField formik={formik} name="extension" label="ส่วนขยาย (ตร.ม.)" onChange={handleDimChange} />
-        <NumberField formik={formik} name="reduction" label="ส่วนลด (ตร.ม.)" onChange={handleDimChange} />
-        <NumberField formik={formik} name="area" label="พื้นที่ (ตร.ม.)" hint="คำนวณอัตโนมัติ · แก้ทับได้" />
-        <NumberField formik={formik} name="volume" label="ปริมาตร (ลบ.ม.)" hint="คำนวณอัตโนมัติ · แก้ทับได้" />
-        <NumberField formik={formik} name="weight" label="น้ำหนัก (ตัน)" />
+        <span className="mes-group-label">ค่าที่คำนวณ</span>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <NumberField formik={formik} name="area" label="พื้นที่" unit="ตร.ม." auto hint="คำนวณอัตโนมัติ · แก้ทับได้" />
+          <NumberField formik={formik} name="volume" label="ปริมาตร" unit="ม³" auto hint="คำนวณอัตโนมัติ · แก้ทับได้" />
+          <NumberField formik={formik} name="weight" label="น้ำหนัก" unit="ตัน" />
+        </div>
       </div>
 
       <div>
-        <label className="mes-label" htmlFor="status">สถานะ</label>
-        <select id="status" className="mes-input" {...formik.getFieldProps('status')}>
-          <option value="">—</option>
-          {PIPE_ORDER.map((k) => (
-            <option key={k} value={k}>{COMPONENT_STATUS[k].th}</option>
-          ))}
-        </select>
-        <FieldError show={formik.touched.status} msg={formik.errors.status} />
+        <span className="mes-group-label">สถานะ</span>
+        <div>
+          <label className="mes-label" htmlFor="status">สถานะ</label>
+          <select id="status" className="mes-input" {...formik.getFieldProps('status')}>
+            <option value="">—</option>
+            {PIPE_ORDER.map((k) => (
+              <option key={k} value={k}>{COMPONENT_STATUS[k].th}</option>
+            ))}
+          </select>
+          <FieldError show={formik.touched.status} msg={formik.errors.status} />
+        </div>
       </div>
 
       <div>
-        <label className="mes-label" htmlFor="file">ไฟล์แบบ (PDF)</label>
-        <input
-          id="file"
-          name="file"
-          className="mes-input !py-2.5"
-          type="file"
-          onChange={(event) => formik.setFieldValue('file', event.currentTarget.files[0])}
-        />
-        <FieldError show={formik.touched.file} msg={formik.errors.file} />
+        <span className="mes-group-label">ไฟล์แบบ</span>
+        <div>
+          <label className="mes-label" htmlFor="file">ไฟล์แบบ (PDF)</label>
+          <input
+            id="file"
+            name="file"
+            className="mes-input !py-2.5"
+            type="file"
+            onChange={(event) => formik.setFieldValue('file', event.currentTarget.files[0])}
+          />
+          <FieldError show={formik.touched.file} msg={formik.errors.file} />
+        </div>
       </div>
 
       <div>
-        <button className="mes-btn mes-btn-primary w-full sm:w-auto" type="submit">บันทึก</button>
+        <button className="mes-btn mes-btn-primary w-full sm:w-auto" type="submit" disabled={submitting}>
+          {submitting ? 'กำลังบันทึก…' : 'บันทึก'}
+        </button>
       </div>
     </form>
   );

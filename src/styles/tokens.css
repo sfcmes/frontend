@@ -162,6 +162,67 @@
     border-bottom: 1px solid var(--mes-border);
     font-variant-numeric: tabular-nums;
   }
+  .mes-hint {
+    font-size: 12px;
+    color: var(--mes-text-muted);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+  .mes-affix {
+    position: relative;
+  }
+  .mes-affix > .mes-input {
+    padding-right: 3rem;
+  }
+  .mes-affix-unit {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--mes-text-muted);
+    font-size: 13px;
+    pointer-events: none;
+  }
+  .mes-group-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--mes-text-muted);
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--mes-border);
+  }
+  .mes-segment {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--mes-bg);
+    border: 1px solid var(--mes-border);
+    border-radius: var(--radius-sm);
+  }
+  .mes-segment-btn {
+    flex: 1 1 auto;
+    min-height: 40px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--mes-text-muted);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s, color .15s;
+  }
+  .mes-segment-btn.is-active {
+    background: var(--mes-surface-2);
+    color: var(--mes-text);
+  }
+  .mes-input-auto {
+    background: var(--mes-surface-2);
+  }
 
   /* [MES] Landing (/auth/login) — motion layers.
      Mobile/tablet: CSS-only entrance + focus micro-interactions (motion-safe).

@@ -6,13 +6,14 @@ import FVProject from '../../components/forms/form-validation/FVProject';
 import ProjectModal from './ProjectModal';
 import api, { fetchProjects, createProject, updateProject, deleteProject } from 'src/utils/api';
 import { StatusBadge } from 'src/components/mes/StatusBadge';
-import { ConfirmDialog, EmptyState, useToast, CardHeader } from 'src/components/mes/ui';
+import { ConfirmDialog, EmptyState, useToast, CardHeader, Modal } from 'src/components/mes/ui';
+import { Icon } from 'src/components/mes/Icon';
+import { fmt, SEM_STATUS } from 'src/components/mes/status-meta';
 
-const RowActions = ({ project, onView, onEdit, onDelete }) => (
-  <div className="flex gap-1.5">
-    <button className="mes-btn mes-btn-ghost !min-h-touch md:!min-h-0 md:!py-1.5 text-xs" onClick={() => onView(project)}>ดู</button>
-    <button className="mes-btn mes-btn-ghost !min-h-touch md:!min-h-0 md:!py-1.5 text-xs" onClick={() => onEdit(project)}>แก้ไข</button>
-    <button className="mes-btn mes-btn-danger !min-h-touch md:!min-h-0 md:!py-1.5 text-xs" onClick={() => onDelete(project.id)}>ลบ</button>
+const RowActions = ({ project, onEdit, onDelete }) => (
+  <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+    <button type="button" className="mes-btn mes-btn-ghost !min-h-touch md:!min-h-0 !px-2 !py-1.5" title="แก้ไข" aria-label="แก้ไข" onClick={() => onEdit(project)}><Icon name="edit" size={18} /></button>
+    <button type="button" className="mes-btn mes-btn-danger !min-h-touch md:!min-h-0 !px-2 !py-1.5" title="ลบ" aria-label="ลบ" onClick={() => onDelete(project.id)}><Icon name="trash" size={18} /></button>
   </div>
 );
 
@@ -24,7 +25,7 @@ const ProjectList = ({ projects, onView, onEdit, onDelete }) => (
       {/* base: cards */}
       <div className="flex flex-col gap-2 p-3 md:hidden">
         {projects.map((project) => (
-          <div key={project.id} className="mes-card p-3">
+          <div key={project.id} className="mes-card cursor-pointer p-3" onClick={() => onView(project)}>
             <div className="flex items-start gap-2">
               <div className="min-w-0 grow">
                 <div className="truncate text-sm font-semibold">{project.name}</div>
@@ -33,11 +34,11 @@ const ProjectList = ({ projects, onView, onEdit, onDelete }) => (
               <StatusBadge status={project.status} kind="sem" />
             </div>
             <div className="mt-1.5 flex gap-4 text-xs text-mes-muted tabular-nums">
-              <span>{project.sections} ชั้น</span>
-              <span>{project.components} ชิ้นงาน</span>
+              <span>{fmt(project.sections)} ชั้น</span>
+              <span>{fmt(project.components)} ชิ้นงาน</span>
             </div>
             <div className="mt-2">
-              <RowActions project={project} onView={onView} onEdit={onEdit} onDelete={onDelete} />
+              <RowActions project={project} onEdit={onEdit} onDelete={onDelete} />
             </div>
           </div>
         ))}
@@ -57,13 +58,13 @@ const ProjectList = ({ projects, onView, onEdit, onDelete }) => (
           </thead>
           <tbody>
             {projects.map((project) => (
-              <tr key={project.id} className="hover:bg-mes-surface-2">
+              <tr key={project.id} className="cursor-pointer even:bg-mes-surface-2/30 hover:bg-mes-surface-2" onClick={() => onView(project)}>
                 <td className="mes-td font-semibold"><span className="block max-w-[220px] truncate">{project.name}</span></td>
                 <td className="mes-td font-mono text-xs">{project.project_code}</td>
                 <td className="mes-td"><StatusBadge status={project.status} kind="sem" /></td>
-                <td className="mes-td text-right">{project.sections}</td>
-                <td className="mes-td text-right">{project.components}</td>
-                <td className="mes-td"><div className="flex justify-end"><RowActions project={project} onView={onView} onEdit={onEdit} onDelete={onDelete} /></div></td>
+                <td className="mes-td text-right">{fmt(project.sections)}</td>
+                <td className="mes-td text-right">{fmt(project.components)}</td>
+                <td className="mes-td"><div className="flex justify-end"><RowActions project={project} onEdit={onEdit} onDelete={onDelete} /></div></td>
               </tr>
             ))}
           </tbody>
@@ -79,7 +80,15 @@ const FormProject = () => {
   const [isModalOpen, setModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const { showToast, toastNode } = useToast();
+
+  const q = query.trim().toLowerCase();
+  const filteredProjects = projects.filter((p) =>
+    (!q || `${p.name} ${p.project_code}`.toLowerCase().includes(q)) &&
+    (!statusFilter || p.status === statusFilter));
 
   const fetchProjectsData = async () => {
     try {
@@ -107,6 +116,11 @@ const FormProject = () => {
     } catch (error) {
       showToast(`บันทึกไม่สำเร็จ: ${error.message}`, 'error');
     }
+  };
+
+  const handleCreateProject = async (newProject) => {
+    await handleAddProject(newProject);
+    setCreateOpen(false);
   };
 
   const handleViewProject = (project) => {
@@ -151,23 +165,35 @@ const FormProject = () => {
 
   return (
     <PageContainer title="สร้างโครงการใหม่" description="This is the form to create a new project.">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="mes-card self-start">
-          <CardHeader title="ภาพรวมโครงการ" />
-          <ProjectList
-            projects={projects}
-            onView={handleViewProject}
-            onEdit={handleEditProject}
-            onDelete={(id) => setDeleteId(id)}
-          />
+      <div className="mes-card">
+        <CardHeader
+          title="ภาพรวมโครงการ"
+          right={
+            <button className="mes-btn mes-btn-primary" onClick={() => setCreateOpen(true)}>
+              + สร้างโครงการใหม่
+            </button>
+          }
+        />
+        <div className="flex flex-col gap-2 border-b border-mes-border p-3 sm:flex-row sm:items-center">
+          <input className="mes-input sm:flex-1" placeholder="ค้นหาชื่อหรือรหัสโครงการ" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <select className="mes-input sm:w-52" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="">ทุกสถานะ</option>
+            {['planning', 'in_progress', 'completed', 'on_hold'].map((s) => <option key={s} value={s}>{SEM_STATUS[s].th}</option>)}
+          </select>
+          <span className="text-sm text-mes-muted sm:ml-1">แสดง {filteredProjects.length} จาก {projects.length}</span>
         </div>
-        <div className="mes-card self-start">
-          <CardHeader title="สร้างโครงการใหม่" />
-          <div className="p-4 md:p-5">
-            <FVProject onAddProject={handleAddProject} />
-          </div>
-        </div>
+        <ProjectList
+          projects={filteredProjects}
+          onView={handleViewProject}
+          onEdit={handleEditProject}
+          onDelete={(id) => setDeleteId(id)}
+        />
       </div>
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="สร้างโครงการใหม่">
+        <div className="p-1">
+          <FVProject onAddProject={handleCreateProject} />
+        </div>
+      </Modal>
       <ProjectModal
         open={isModalOpen}
         project={selectedProject}
