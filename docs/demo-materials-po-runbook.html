@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo Runbook — วัสดุ &amp; สูตร → คำนวณวัสดุ → ใบสั่งซื้อ (PO)</title>
+<style>
+  :root {
+    --ink: #1a1d24; --muted: #5b6472; --line: #e2e6ec; --bg: #ffffff;
+    --soft: #f6f8fb; --accent: #b7791f; --accent-soft: #fef6e6;
+    --danger: #b42318; --danger-soft: #fef3f2; --ok: #067647; --ok-soft: #edfcf2;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; color: var(--ink); background: var(--soft);
+    font-family: "IBM Plex Sans Thai", "Noto Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.65; font-size: 15px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+  header.doc {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 14px;
+    padding: 28px 28px 24px; margin-bottom: 24px;
+  }
+  header.doc h1 { margin: 0 0 6px; font-size: 24px; line-height: 1.3; }
+  header.doc p.sub { margin: 0; color: var(--muted); font-size: 14px; }
+  .flow {
+    margin-top: 18px; padding: 14px 16px; background: var(--soft);
+    border-radius: 10px; font-family: var(--mono); font-size: 12.5px;
+    color: var(--muted); white-space: pre; overflow-x: auto;
+  }
+  section {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 14px;
+    padding: 22px 26px; margin-bottom: 20px;
+  }
+  h2 {
+    margin: 0 0 14px; font-size: 18px; display: flex; align-items: center; gap: 10px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--line);
+  }
+  h2 .n {
+    flex: none; width: 26px; height: 26px; border-radius: 7px; background: var(--ink);
+    color: #fff; font-size: 14px; display: grid; place-items: center; font-weight: 700;
+  }
+  h3 { margin: 20px 0 8px; font-size: 15px; }
+  p { margin: 8px 0; }
+  code {
+    font-family: var(--mono); font-size: .88em; background: var(--soft);
+    padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line); white-space: nowrap;
+  }
+  .kbd {
+    font-family: inherit; background: var(--accent-soft); color: var(--accent);
+    padding: 1px 8px; border-radius: 5px; font-weight: 600; border: 1px solid #f0dcb4;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--soft); font-weight: 700; font-size: 13px; }
+  td.step { font-weight: 700; text-align: center; width: 34px; color: var(--muted); }
+  tr:last-child td { border-bottom: none; }
+  .callout {
+    border-radius: 10px; padding: 14px 16px; margin: 14px 0; border: 1px solid;
+    font-size: 14px;
+  }
+  .callout.danger { background: var(--danger-soft); border-color: #fecdca; }
+  .callout.danger .h { color: var(--danger); font-weight: 700; margin-bottom: 6px; }
+  .callout.ok { background: var(--ok-soft); border-color: #abefc6; }
+  .callout.ok .h { color: var(--ok); font-weight: 700; margin-bottom: 6px; }
+  .callout.info { background: var(--accent-soft); border-color: #f0dcb4; }
+  .callout.info .h { color: var(--accent); font-weight: 700; margin-bottom: 6px; }
+  ol.traps { margin: 8px 0 0; padding-left: 20px; }
+  ol.traps li { margin: 7px 0; }
+  ul.tight { margin: 8px 0; padding-left: 20px; }
+  ul.tight li { margin: 5px 0; }
+  .path { font-family: var(--mono); font-size: 12.5px; color: var(--accent); }
+  .pill {
+    display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 9px;
+    border-radius: 20px; background: var(--soft); border: 1px solid var(--line); color: var(--muted);
+  }
+  .pill.prep { background: #eef2ff; border-color: #c7d2fe; color: #3730a3; }
+  .pill.live { background: var(--ok-soft); border-color: #abefc6; color: var(--ok); }
+  .hint { color: var(--muted); font-size: 13px; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 30px; }
+  @media print {
+    body { background: #fff; font-size: 12px; }
+    .wrap { max-width: none; padding: 0; }
+    section, header.doc { border: 1px solid #ccc; break-inside: avoid; box-shadow: none; }
+    .no-print { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="doc">
+    <h1>Demo Runbook — วัสดุ &amp; สูตร → คำนวณวัสดุ → ใบสั่งซื้อ (PO)</h1>
+    <p class="sub">คู่มือกดโชว์สดให้ user ดู 3 หน้า พร้อมลำดับกรอกข้อมูลที่ถูกต้อง และกับดักที่ทำให้ demo พัง</p>
+    <div class="flow">Project → Section → Component (พรีคาสท์ · status=planning · ปริมาตร&gt;0)
+                            │  type ถูกตั้ง = "precast" อัตโนมัติ
+  Materials (ทะเบียนวัสดุ) ─┤
+  Recipe (สูตร: ประเภท="precast", แหล่งค่า=ปริมาตร) → Admin เปิดใช้งาน
+                            ▼
+               คำนวณวัสดุ (เลือกโครงการ) → สร้าง PO ร่าง → จัดการ PO</div>
+  </header>
+
+  <!-- TRAPS -->
+  <section>
+    <h2><span class="n">!</span> กับดัก 8 อย่างที่ทำให้ demo พัง — อ่านก่อน</h2>
+    <div class="callout danger">
+      <div class="h">ถ้าหน้าคำนวณขึ้น "ตารางว่าง" หรือ "แถบคำเตือนสีทอง" มักมาจากข้อใดข้อหนึ่งนี้</div>
+      <ol class="traps">
+        <li><b>ต้อง login เป็น Admin</b> — buyer ไม่ถูก seed ในระบบ; การเปิดใช้งานสูตร = Admin เท่านั้น; action ของ PO/วัสดุ = buyer/Admin</li>
+        <li><b>ใช้แท็บ "ชิ้นงานพรีคาสท์" เท่านั้น</b> — "ชิ้นงานอื่นๆ" เก็บคนละตาราง (<code>other_components</code>) การคำนวณ <b>มองไม่เห็น</b></li>
+        <li><b>สถานะชิ้นงานต้องเป็น "รอผลิต" (planning)</b> — สถานะอื่นไม่ถูกนับ</li>
+        <li><b>ประเภทในสูตรต้องเป็น <code>precast</code></b> — พรีคาสท์ถูกตั้ง type = "precast" อัตโนมัติ (จับคู่ไม่สนตัวพิมพ์เล็ก-ใหญ่)</li>
+        <li><b>แหล่งค่าในสูตรต้องตรงกับช่องที่กรอกค่าบวก</b> — เลือก "ปริมาตร" ในสูตร ⇒ ชิ้นงานต้องมีปริมาตร &gt; 0</li>
+        <li><b>ต้องกด "เปิดใช้งาน" สูตร</b> — สูตรสถานะ "ร่าง" ไม่ถูกนำมาคำนวณ</li>
+        <li>ช่อง พื้นที่/ปริมาตร/น้ำหนัก ในฟอร์มพรีคาสท์ <b>กรอกมือ</b> (ฟอร์มนี้ไม่คำนวณให้) + ต้องแนบไฟล์ <b>PDF</b></li>
+        <li>หน่วยน้ำหนักในสูตรเขียน kg แต่ฟอร์มกรอกเป็น "ตัน" → <b>แนะนำใช้ "ปริมาตร"</b> ใน demo เพื่อเลี่ยงความสับสน</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- SAMPLE DATA OVERVIEW -->
+  <section>
+    <h2><span class="n">D</span> ชุดข้อมูลตัวอย่างสำหรับ demo (กรอกตามได้เลย)</h2>
+    <p class="hint">ตัวเลขทั้งหมดนี้คำนวณให้สอดคล้องกันแล้ว — ผนังพรีคาสท์ 3 ชิ้น + วัสดุ 2 ชนิด (2 ผู้ขาย เพื่อให้ระบบสร้าง PO แยก 2 ฉบับ) และใช้ "ปริมาตร" เป็นแหล่งค่าทั้งคู่</p>
+
+    <h3>โครงการ &amp; ชั้น</h3>
+    <table>
+      <tbody>
+        <tr><th style="width:38%">โครงการ — ชื่อ</th><td>คอนโด สุขุมวิท 101 เฟส 1</td></tr>
+        <tr><th>โครงการ — รหัส</th><td><code>SKV-101</code></td></tr>
+        <tr><th>โครงการ — จำนวนชั้น</th><td>1</td></tr>
+        <tr><th>โครงการ — สถานะ</th><td>In Progress</td></tr>
+        <tr><th>ชั้น — ชื่อ</th><td>ชั้น 1 (Ground Floor)</td></tr>
+        <tr><th>ชั้น — จำนวนชิ้นงาน</th><td>3</td></tr>
+        <tr><th>ชั้น — สถานะ</th><td>แผนผลิต</td></tr>
+      </tbody>
+    </table>
+
+    <h3>ชิ้นงานพรีคาสท์ 3 ชิ้น <span class="hint">(สถานะทุกชิ้น = รอผลิต · แนบ PDF อะไรก็ได้ · <b>พื้นที่/ปริมาตร คำนวณอัตโนมัติ</b> จากขนาด — กรอกแค่ กว้าง/สูง/หนา + น้ำหนัก)</span></h3>
+    <table>
+      <thead>
+        <tr>
+          <th>ชื่อชิ้นงาน</th><th>กว้าง<br>(มม.)</th><th>สูง<br>(มม.)</th><th>หนา<br>(มม.)</th>
+          <th>ส่วนขยาย</th><th>ส่วนลด</th><th>พื้นที่<br>(ตร.ม.)</th><th>ปริมาตร<br>(ลบ.ม.)</th><th>น้ำหนัก<br>(ตัน)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>W-01</code></td><td>3000</td><td>2800</td><td>150</td><td>0</td><td>0</td><td>8.4</td><td>1.26</td><td>3.0</td></tr>
+        <tr><td><code>W-02</code></td><td>3500</td><td>2800</td><td>150</td><td>0</td><td>0</td><td>9.8</td><td>1.47</td><td>3.5</td></tr>
+        <tr><td><code>W-03</code></td><td>2500</td><td>2800</td><td>150</td><td>0</td><td>0</td><td>7.0</td><td>1.05</td><td>2.5</td></tr>
+      </tbody>
+    </table>
+    <p class="hint">ที่มา: พื้นที่ = (กว้าง×สูง)/1,000,000 + ส่วนขยาย − ส่วนลด · ปริมาตร = พื้นที่ × (หนา/1000) · น้ำหนัก ≈ ปริมาตร × 2.4 — <b>ปริมาตรรวม 3 ชิ้น = 3.78 ลบ.ม.</b></p>
+
+    <h3>วัสดุ 2 ชนิด + สูตร 2 รายการ</h3>
+    <table>
+      <thead><tr><th>วัสดุ (รหัส · ชื่อ · หน่วย · ผู้ขาย)</th><th>สูตร (ประเภท · แหล่งค่า · ตัวคูณ · เผื่อเสีย)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>CONC-01</code> · คอนกรีตผสมเสร็จ · หน่วย <b>ลบ.ม.</b> · แพ็ค 1 · ผู้ขาย <b>SCG</b></td>
+          <td>precast · <b>ปริมาตร</b> · ตัวคูณ <b>1</b> · เผื่อเสีย <b>5%</b></td>
+        </tr>
+        <tr>
+          <td><code>STEEL-DB12</code> · เหล็กเสริม DB12 · หน่วย <b>กก.</b> · แพ็ค 50 · ผู้ขาย <b>ทาทา สตีล</b></td>
+          <td>precast · <b>ปริมาตร</b> · ตัวคูณ <b>90</b> · เผื่อเสีย <b>3%</b></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout ok">
+      <div class="h">ผลที่ต้องเห็นในหน้า "คำนวณวัสดุ" (เลือกโครงการ SKV-101)</div>
+      <ul class="tight" style="margin-bottom:0">
+        <li><b>คอนกรีตผสมเสร็จ</b>: ต้องใช้ ≈ <b>3.97</b> · ปัดขึ้น <b>4</b> ลบ.ม. · ต้องสั่งเพิ่ม <b>4</b> ลบ.ม.</li>
+        <li><b>เหล็กเสริม DB12</b>: ต้องใช้ ≈ <b>350.41</b> · ปัดขึ้น <b>400</b> กก. · ต้องสั่งเพิ่ม <b>400</b> กก.</li>
+        <li>ไม่มีแถบคำเตือน · สร้าง PO ร่าง = <b>2 ฉบับ</b> (SCG 1 ฉบับ, ทาทา สตีล 1 ฉบับ)</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- PART A -->
+  <section>
+    <h2><span class="n">A</span> เตรียมข้อมูลก่อน demo <span class="pill prep">ทำล่วงหน้าได้</span></h2>
+    <p class="hint">ทำ 7 ขั้นนี้ให้ครบก่อน user มา โดยกรอกค่าจากตารางในหัวข้อ D (หรือจะโชว์สดตั้งแต่ต้นก็ได้ แต่กินเวลา)</p>
+    <table>
+      <thead><tr><th>#</th><th>หน้า / เมนู</th><th>กรอกอะไร (ค่าตัวอย่าง)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="step">1</td>
+          <td>เข้าสู่ระบบ<br><span class="path">/auth/login</span></td>
+          <td>เข้าเป็น <span class="kbd">Admin</span></td>
+        </tr>
+        <tr>
+          <td class="step">2</td>
+          <td>สร้างโครงการใหม่<br><span class="path">/forms/form-project</span></td>
+          <td>
+            การ์ด "สร้างโครงการใหม่":
+            <ul class="tight">
+              <li>ชื่อโครงการ: <b>คอนโด สุขุมวิท 101 เฟส 1</b></li>
+              <li>รหัสโครงการ: <code>SKV-101</code></li>
+              <li>จำนวนชั้นของโครงการ: <b>1</b></li>
+              <li>สถานะโครงการ: <b>In Progress</b></li>
+            </ul>
+            → <b>บันทึกโครงการเข้าระบบ</b>
+          </td>
+        </tr>
+        <tr>
+          <td class="step">3</td>
+          <td>สร้างข้อมูลชั้น<br><span class="path">/forms/form-section</span></td>
+          <td>
+            <ul class="tight">
+              <li>รหัสโครงการ: เลือก <b>SKV-101 - คอนโด สุขุมวิท 101 เฟส 1</b></li>
+              <li>ชื่อชั้นในโครงการ: <b>ชั้น 1 (Ground Floor)</b></li>
+              <li>จำนวนชิ้นงาน: <b>3</b></li>
+              <li>สถานะของชั้น: <b>แผนผลิต</b></li>
+            </ul>
+            → <b>บันทึก Section เข้าระบบ</b>
+          </td>
+        </tr>
+        <tr>
+          <td class="step">4</td>
+          <td>สร้างข้อมูลชิ้นงาน<br><span class="path">/forms/form-component</span></td>
+          <td>
+            แท็บ <b>"เพิ่มชิ้นงานเข้าระบบรายชิ้น" → "ชิ้นงานพรีคาสท์"</b> — กรอก <b>3 ชิ้น (W-01, W-02, W-03)</b> ตามตารางหัวข้อ D:
+            <ul class="tight">
+              <li>โครงการ = SKV-101 · ชั้น = ชั้น 1 · ชื่อชิ้นงาน = W-0X</li>
+              <li>กว้าง/สูง/หนา · ส่วนขยาย 0 · ส่วนลด 0 · <b>พื้นที่ · ปริมาตร · น้ำหนัก</b> (ตามตาราง)</li>
+              <li>สถานะ = <span class="kbd">รอผลิต</span> ← สำคัญ</li>
+              <li>แนบไฟล์ <b>PDF</b> (อะไรก็ได้) → <b>บันทึก</b> แล้วทำชิ้นถัดไป</li>
+            </ul>
+          </td>
+        </tr>
+        <tr>
+          <td class="step">5</td>
+          <td>วัสดุและสูตร → แท็บ <b>ทะเบียนวัสดุ</b><br><span class="path">/forms/form-materials</span></td>
+          <td>
+            กด "เพิ่มวัสดุ" <b>2 ครั้ง</b>:
+            <ul class="tight">
+              <li>รหัส <code>CONC-01</code> · ชื่อ คอนกรีตผสมเสร็จ · หน่วย <b>ลบ.ม.</b> · ขนาดแพ็ค <b>1</b> · ผู้ขายหลัก <b>SCG</b></li>
+              <li>รหัส <code>STEEL-DB12</code> · ชื่อ เหล็กเสริม DB12 · หน่วย <b>กก.</b> · ขนาดแพ็ค <b>50</b> · ผู้ขายหลัก <b>ทาทา สตีล</b></li>
+            </ul>
+          </td>
+        </tr>
+        <tr>
+          <td class="step">6</td>
+          <td>วัสดุและสูตร → แท็บ <b>สูตรวัสดุ</b></td>
+          <td>
+            "สร้างสูตร (ร่าง)" <b>2 ครั้ง</b>:
+            <ul class="tight">
+              <li>ประเภท <span class="kbd">precast</span> · วัสดุ <b>CONC-01</b> · แหล่งค่า <b>ปริมาตร (m³)</b> · ตัวคูณ <b>1</b> · เผื่อเสีย <b>5</b></li>
+              <li>ประเภท <span class="kbd">precast</span> · วัสดุ <b>STEEL-DB12</b> · แหล่งค่า <b>ปริมาตร (m³)</b> · ตัวคูณ <b>90</b> · เผื่อเสีย <b>3</b></li>
+            </ul>
+            → <b>บันทึกร่าง</b>
+          </td>
+        </tr>
+        <tr>
+          <td class="step">7</td>
+          <td>แถวสูตร (Admin)</td>
+          <td>กด <span class="kbd">เปิดใช้งาน</span> ทั้ง <b>2 สูตร</b> → ยืนยัน → สถานะเปลี่ยนเป็น "ใช้งาน"</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout ok">
+      <div class="h">✓ จบข้อ 7 = ระบบพร้อม demo</div>
+      ไปหน้า "คำนวณวัสดุ" เลือกโครงการ <b>SKV-101</b> กดคำนวณ ต้องเห็น <b>2 แถว</b> (คอนกรีต 4 ลบ.ม. · เหล็ก 400 กก.) โดย <b>ไม่มีแถบคำเตือน</b> — ตรงกับ "ผลที่ต้องเห็น" ในหัวข้อ D
+    </div>
+  </section>
+
+  <!-- PART B -->
+  <section>
+    <h2><span class="n">B</span> สคริปต์ demo สด <span class="pill live">โชว์ให้ user ดู</span></h2>
+
+    <h3>B1 · หน้า "วัสดุและสูตร" <span class="path">/forms/form-materials</span></h3>
+    <ul class="tight">
+      <li>แท็บ <b>ทะเบียนวัสดุ</b>: คลังวัสดุที่สั่งซื้อได้</li>
+      <li>แท็บ <b>สูตรวัสดุ</b>: กติกาแปลงชิ้นงาน → วัสดุ ชี้สถานะ "ใช้งาน"</li>
+      <li class="hint">ปุ่ม <b>?</b> มุมขวาบน = ทัวร์สอนในหน้าจริง กดโชว์ได้</li>
+    </ul>
+
+    <h3>B2 · หน้า "คำนวณวัสดุ" <span class="path">/forms/form-material-requirements</span> — ไฮไลต์</h3>
+    <ol class="tight">
+      <li>ติ๊กเลือกโครงการ <b>SKV-101</b> → กด <span class="kbd">คำนวณความต้องการ</span></li>
+      <li>ชี้ <b>2 แถว</b>: คอนกรีต "ต้องสั่งเพิ่ม 4 ลบ.ม." · เหล็ก "400 กก." (คอลัมน์สีทอง = ยอดที่ยังขาด)</li>
+      <li><b>กดที่แถวคอนกรีต</b> เพื่อกางดูที่มา: W-01/02/03 × ตัวคูณ 1 × เผื่อเสีย 5% (ตรวจย้อนได้ทุกตัวเลข)</li>
+      <li>ติ๊กทั้ง 2 วัสดุ → <span class="kbd">สร้างใบสั่งซื้อ (ร่าง)</span> → ยืนยัน → ระบบสร้าง PO <b>2 ฉบับ</b> (SCG · ทาทา สตีล) + ให้ลิงก์ไปหน้า PO</li>
+    </ol>
+
+    <h3>B3 · หน้า "ใบสั่งซื้อ (PO)" <span class="path">/forms/form-po</span></h3>
+    <ul class="tight">
+      <li>แท็บสถานะ: ร่าง → รอสั่งซื้อ → สั่งซื้อแล้ว → รับของแล้ว</li>
+      <li>เปิด PO ร่างที่เพิ่งสร้าง → แก้ไข / ส่งให้ผู้จัดซื้อ</li>
+      <li>โชว์ปุ่มที่เปลี่ยนตามสถานะ: <span class="kbd">ยืนยันสั่งซื้อ</span> → <span class="kbd">ยืนยันรับของ</span></li>
+      <li>เมื่อรับของแล้ว ยอด "สั่งแล้ว/ค้างรับ" จะกลับไปหักใน B2 อัตโนมัติ (วงจรครบ)</li>
+    </ul>
+  </section>
+
+  <!-- TYPE PROVENANCE -->
+  <section>
+    <h2><span class="n">?</span> "ประเภทชิ้นงาน" ในสูตร เอามาจากไหน</h2>
+    <p>
+      ช่อง "ประเภทชิ้นงาน" ตอนสร้างสูตร เป็น <b>ช่องพิมพ์ข้อความอิสระ</b> — ค่าที่พิมพ์คือคอลัมน์
+      <code>type</code> ของชิ้นงาน ระบบเอาไปจับคู่แบบ <b>ไม่สนตัวพิมพ์เล็ก-ใหญ่</b>
+      (<code>LOWER(recipe.component_type) = LOWER(component.type)</code>)
+    </p>
+    <p>ค่า <code>type</code> ของชิ้นงานมาจาก 1 ใน 3 ทางนี้:</p>
+    <table>
+      <thead><tr><th>ชิ้นงานสร้างจาก</th><th><code>type</code> เป็นอะไร</th><th>คำนวณเห็นไหม</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>ฟอร์ม <b>พรีคาสท์</b></td>
+          <td>บังคับเป็น <span class="kbd">precast</span> เสมอ (ฟอร์มไม่มีช่องให้เลือก)</td>
+          <td>✅ เห็น</td>
+        </tr>
+        <tr>
+          <td>นำเข้าด้วย <b>Excel</b></td>
+          <td>อ่านจากคอลัมน์ <b>"ประเภทชิ้นงาน"</b> ในไฟล์ → ตั้งเองได้ (เช่น เสาเข็ม, คาน)</td>
+          <td>✅ เห็น</td>
+        </tr>
+        <tr>
+          <td>ฟอร์ม <b>ชิ้นงานอื่นๆ</b></td>
+          <td>เก็บคนละตาราง (<code>other_components</code>)</td>
+          <td>❌ ไม่เห็น</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout info">
+      <div class="h">สรุปสำหรับ demo</div>
+      ถ้าสร้างชิ้นงานผ่านฟอร์ม <b>พรีคาสท์</b> (วิธีที่แนะนำ) → ในสูตรต้องพิมพ์ <span class="kbd">precast</span> เป๊ะๆ<br>
+      ถ้าอยากได้ประเภทกำหนดเอง → นำเข้าผ่าน <b>Excel</b> กรอกคอลัมน์ "ประเภทชิ้นงาน" แล้วในสูตรพิมพ์ให้ตรงคำนั้น
+    </div>
+  </section>
+
+  <!-- TROUBLESHOOT -->
+  <section>
+    <h2><span class="n">✓</span> เช็คลิสต์แก้ปัญหา (ถ้าคำนวณไม่ออก)</h2>
+    <p>ไล่ตามลำดับนี้:</p>
+    <ul class="tight">
+      <li>สูตรอยู่สถานะ <b>"ใช้งาน"</b> แล้วหรือยัง? (ไม่ใช่ "ร่าง")</li>
+      <li>ประเภทในสูตร = <code>precast</code> ตรงกับชิ้นงานพรีคาสท์ไหม?</li>
+      <li>ชิ้นงานสถานะ <b>"รอผลิต"</b> (planning) หรือเปล่า?</li>
+      <li>ชิ้นงานกรอก <b>ปริมาตร &gt; 0</b> (ตรงกับ "แหล่งค่า" ในสูตร) ไหม?</li>
+      <li>เลือกถูกโครงการที่มีชิ้นงานพรีคาสท์เหล่านั้นไหม?</li>
+      <li>วัสดุยัง <b>"ใช้งาน"</b> อยู่ไหม (ไม่ถูกปิดใช้งาน)?</li>
+    </ul>
+  </section>
+
+  <footer>SFC MES v3 · Demo Runbook · สร้างจากการอ่านโค้ดจริง frontend + backend</footer>
+
+</div>
+</body>
+</html>

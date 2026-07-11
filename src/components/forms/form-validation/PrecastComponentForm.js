@@ -40,7 +40,20 @@ const validationSchema = yup.object({
 
 const FieldError = ({ show, msg }) => (show && msg ? <div className="mt-1 text-xs text-sem-danger">{msg}</div> : null);
 
-const NumberField = ({ formik, name, label }) => (
+// Auto-calc พื้นที่/ปริมาตร — same formula as ComponentDetails.js (component-details-feature skill).
+// area   = (width × height) / 1,000,000 + extension − reduction   [ตร.ม.]
+// volume = area × (thickness / 1000)                              [ลบ.ม.]
+const num = (v) => parseFloat(v) || 0;
+const computeAreaVolume = (v) => {
+  const area = (num(v.width) * num(v.height)) / 1_000_000 + num(v.extension) - num(v.reduction);
+  const volume = area * (num(v.thickness) / 1000);
+  return {
+    area: area ? parseFloat(area.toFixed(6)) : '',
+    volume: volume ? parseFloat(volume.toFixed(6)) : '',
+  };
+};
+
+const NumberField = ({ formik, name, label, hint, onChange }) => (
   <div>
     <label className="mes-label" htmlFor={name}>{label}</label>
     <input
@@ -49,7 +62,9 @@ const NumberField = ({ formik, name, label }) => (
       type="number"
       inputMode="decimal"
       {...formik.getFieldProps(name)}
+      {...(onChange ? { onChange } : {})}
     />
+    {hint && <div className="mt-1 text-xs text-mes-muted">{hint}</div>}
     <FieldError show={formik.touched[name]} msg={formik.errors[name]} />
   </div>
 );
@@ -107,6 +122,16 @@ const PrecastComponentForm = ({ projects, sections, onProjectChange }) => {
     },
   });
 
+  // Recompute พื้นที่/ปริมาตร on any dimension change — user can still type over
+  // area/volume afterwards (override stays until a dimension changes again).
+  const handleDimChange = (e) => {
+    formik.handleChange(e);
+    const next = { ...formik.values, [e.target.name]: e.target.value };
+    const { area, volume } = computeAreaVolume(next);
+    formik.setFieldValue('area', area);
+    formik.setFieldValue('volume', volume);
+  };
+
   return (
     <form onSubmit={formik.handleSubmit} className="flex flex-col gap-3">
       {error && (
@@ -160,13 +185,13 @@ const PrecastComponentForm = ({ projects, sections, onProjectChange }) => {
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <NumberField formik={formik} name="width" label="ความกว้าง (มม.)" />
-        <NumberField formik={formik} name="height" label="ความสูง (มม.)" />
-        <NumberField formik={formik} name="thickness" label="ความหนา (มม.)" />
-        <NumberField formik={formik} name="extension" label="ส่วนขยาย (ตร.ม.)" />
-        <NumberField formik={formik} name="reduction" label="ส่วนลด (ตร.ม.)" />
-        <NumberField formik={formik} name="area" label="พื้นที่ (ตร.ม.)" />
-        <NumberField formik={formik} name="volume" label="ปริมาตร (ลบ.ม.)" />
+        <NumberField formik={formik} name="width" label="ความกว้าง (มม.)" onChange={handleDimChange} />
+        <NumberField formik={formik} name="height" label="ความสูง (มม.)" onChange={handleDimChange} />
+        <NumberField formik={formik} name="thickness" label="ความหนา (มม.)" onChange={handleDimChange} />
+        <NumberField formik={formik} name="extension" label="ส่วนขยาย (ตร.ม.)" onChange={handleDimChange} />
+        <NumberField formik={formik} name="reduction" label="ส่วนลด (ตร.ม.)" onChange={handleDimChange} />
+        <NumberField formik={formik} name="area" label="พื้นที่ (ตร.ม.)" hint="คำนวณอัตโนมัติ · แก้ทับได้" />
+        <NumberField formik={formik} name="volume" label="ปริมาตร (ลบ.ม.)" hint="คำนวณอัตโนมัติ · แก้ทับได้" />
         <NumberField formik={formik} name="weight" label="น้ำหนัก (ตัน)" />
       </div>
 
