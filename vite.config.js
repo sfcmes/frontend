@@ -38,4 +38,25 @@ export default defineConfig({
 
   plugins: [svgr(), react()],
   assetsInclude: ['**/*.mp4', '**/*.mov'],
+
+  // Dev server: expose on the network and proxy /api to the local backend so the
+  // whole app is reachable behind a single public URL (cloudflared tunnel → :5173).
+  // Frontend calls /api same-origin → no CORS, no second tunnel. See VITE_API_BASE_URL=/api in .env.
+  server: {
+    host: true, // listen on 0.0.0.0 so the tunnel can reach it
+    allowedHosts: ['.trycloudflare.com'], // accept cloudflared quick-tunnel hostnames
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        // Backend CORS whitelists localhost:5173 — rewrite Origin so the tunnel host
+        // (which isn't whitelisted) passes the backend's Origin check. Survives tunnel URL changes.
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('origin', 'http://localhost:5173');
+          });
+        },
+      },
+    },
+  },
 });
