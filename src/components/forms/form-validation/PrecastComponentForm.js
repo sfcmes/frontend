@@ -95,7 +95,7 @@ const PrecastComponentForm = ({ projects, sections, onProjectChange }) => {
       area: '',
       volume: '',
       weight: '',
-      status: '',
+      status: 'planning',
       file: null,
     },
     validationSchema,

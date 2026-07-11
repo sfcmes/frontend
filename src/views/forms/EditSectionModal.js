@@ -46,7 +46,7 @@ const EditSectionModal = ({ open, section, onClose, onSave, isEditing }) => {
     <Modal
       open={open}
       onClose={onClose}
-      title={isEditing ? 'แก้ไขชั้น' : 'ดูข้อมูลชั้น'}
+      title={isEditing ? 'แก้ไขชั้น' : 'รายละเอียดชั้น'}
       footer={
         <>
           <button className="mes-btn mes-btn-ghost" onClick={onClose}>ยกเลิก</button>

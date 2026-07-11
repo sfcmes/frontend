@@ -7,8 +7,10 @@ import FVSection from '../../components/forms/form-validation/FVSection';
 import api, { createSection, updateSection, deleteSection } from '../../utils/api';
 import { StatusBadge } from 'src/components/mes/StatusBadge';
 import { ConfirmDialog, EmptyState, useToast, CardHeader, Modal } from 'src/components/mes/ui';
+import { Icon } from 'src/components/mes/Icon';
+import { fmt, SEM_STATUS } from 'src/components/mes/status-meta';
 
-const SectionList = ({ sections, onEdit, onDelete }) => (
+const SectionList = ({ sections, onView, onEdit, onDelete }) => (
   sections.length === 0 ? (
     <EmptyState icon="brand-codepen" title="ยังไม่มีข้อมูลชั้น" />
   ) : (
@@ -16,7 +18,7 @@ const SectionList = ({ sections, onEdit, onDelete }) => (
       {/* base: cards */}
       <div className="flex flex-col gap-2 p-3 md:hidden">
         {sections.map((section) => (
-          <div key={section.id} className="mes-card p-3">
+          <div key={section.id} className="mes-card cursor-pointer p-3" onClick={() => onView(section)}>
             <div className="flex items-start gap-2">
               <div className="min-w-0 grow">
                 <div className="truncate text-sm font-semibold">{section.name}</div>
@@ -24,10 +26,10 @@ const SectionList = ({ sections, onEdit, onDelete }) => (
               </div>
               <StatusBadge status={section.status} kind="sem" />
             </div>
-            <div className="mt-1.5 text-xs text-mes-muted tabular-nums">{section.components || 'N/A'} ชิ้นงาน</div>
-            <div className="mt-2 flex gap-1.5">
-              <button className="mes-btn mes-btn-ghost !min-h-touch text-xs" onClick={() => onEdit(section)}>แก้ไข</button>
-              <button className="mes-btn mes-btn-danger !min-h-touch text-xs" onClick={() => onDelete(section.id)}>ลบ</button>
+            <div className="mt-1.5 text-xs text-mes-muted tabular-nums">{fmt(section.components)} ชิ้นงาน</div>
+            <div className="mt-2 flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+              <button type="button" className="mes-btn mes-btn-ghost !min-h-touch !px-3 text-xs" title="แก้ไข" aria-label="แก้ไข" onClick={() => onEdit(section)}><Icon name="edit" size={18} /></button>
+              <button type="button" className="mes-btn mes-btn-danger !min-h-touch !px-3 text-xs" title="ลบ" aria-label="ลบ" onClick={() => onDelete(section.id)}><Icon name="trash" size={18} /></button>
             </div>
           </div>
         ))}
@@ -46,15 +48,15 @@ const SectionList = ({ sections, onEdit, onDelete }) => (
           </thead>
           <tbody>
             {sections.map((section) => (
-              <tr key={section.id} className="hover:bg-mes-surface-2">
+              <tr key={section.id} className="cursor-pointer even:bg-mes-surface-2/30 hover:bg-mes-surface-2" onClick={() => onView(section)}>
                 <td className="mes-td"><span className="block max-w-[200px] truncate">{section.project_name}</span></td>
                 <td className="mes-td font-semibold">{section.name}</td>
                 <td className="mes-td"><StatusBadge status={section.status} kind="sem" /></td>
-                <td className="mes-td text-right">{section.components || 'N/A'}</td>
+                <td className="mes-td text-right">{fmt(section.components)}</td>
                 <td className="mes-td">
-                  <div className="flex justify-end gap-1.5">
-                    <button className="mes-btn mes-btn-ghost !min-h-0 !py-1.5 text-xs" onClick={() => onEdit(section)}>แก้ไข</button>
-                    <button className="mes-btn mes-btn-danger !min-h-0 !py-1.5 text-xs" onClick={() => onDelete(section.id)}>ลบ</button>
+                  <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                    <button type="button" className="mes-btn mes-btn-ghost !min-h-0 !px-2 !py-1.5" title="แก้ไข" aria-label="แก้ไข" onClick={() => onEdit(section)}><Icon name="edit" size={18} /></button>
+                    <button type="button" className="mes-btn mes-btn-danger !min-h-0 !px-2 !py-1.5" title="ลบ" aria-label="ลบ" onClick={() => onDelete(section.id)}><Icon name="trash" size={18} /></button>
                   </div>
                 </td>
               </tr>
@@ -70,9 +72,17 @@ const FormSection = () => {
   const [sections, setSections] = useState([]);
   const [editingSection, setEditingSection] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [modalEditing, setModalEditing] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const { showToast, toastNode } = useToast();
+
+  const q = query.trim().toLowerCase();
+  const filteredSections = sections.filter((s) =>
+    (!q || `${s.project_name} ${s.name}`.toLowerCase().includes(q)) &&
+    (!statusFilter || s.status === statusFilter));
 
   const fetchSections = async () => {
     try {
@@ -142,9 +152,18 @@ const FormSection = () => {
           title="ภาพรวมแต่ละชั้นของแต่ละโครงการ"
           right={<button className="mes-btn mes-btn-primary" onClick={() => setCreateOpen(true)}>+ สร้างชั้นใหม่</button>}
         />
+        <div className="flex flex-col gap-2 border-b border-mes-border p-3 sm:flex-row sm:items-center">
+          <input className="mes-input sm:flex-1" placeholder="ค้นหาชื่อโครงการหรือชั้น" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <select className="mes-input sm:w-52" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="">ทุกสถานะ</option>
+            {['planning', 'in_progress', 'completed', 'on_hold'].map((s) => <option key={s} value={s}>{SEM_STATUS[s].th}</option>)}
+          </select>
+          <span className="text-sm text-mes-muted sm:ml-1">แสดง {filteredSections.length} จาก {sections.length}</span>
+        </div>
         <SectionList
-          sections={sections}
-          onEdit={(s) => { setEditingSection(s); setIsEditModalOpen(true); }}
+          sections={filteredSections}
+          onView={(s) => { setEditingSection(s); setModalEditing(false); setIsEditModalOpen(true); }}
+          onEdit={(s) => { setEditingSection(s); setModalEditing(true); setIsEditModalOpen(true); }}
           onDelete={(id) => setDeleteId(id)}
         />
       </div>
@@ -158,7 +177,7 @@ const FormSection = () => {
         onClose={() => setIsEditModalOpen(false)}
         section={editingSection}
         onSave={handleEditSection}
-        isEditing
+        isEditing={modalEditing}
       />
       <ConfirmDialog
         open={Boolean(deleteId)}
